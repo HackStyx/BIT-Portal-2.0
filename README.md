@@ -53,8 +53,11 @@ Upon completion, BIT Portal 2.0 will provide a highly functional, responsive, an
 
 ## Collaborators
 > [Prince Kumar Gupta](https://github.com/HackStyx)
+> 
 > [Rishav Kumar](https://github.com/thisisrishavkumar)
+> 
 > [Nischay J](https://github.com/nischay2004)
+> 
 > [Lakshay Rai](https://github.com/gekkorizz)
 
 ## References
