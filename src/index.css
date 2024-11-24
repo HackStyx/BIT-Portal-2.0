@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.shape {
+  transition: transform 5s ease-in-out;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+.shape {
+  animation: float 10s ease-in-out infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  animation: gradient 3s linear infinite;
+}
+
+.text-muted-foreground {
+  @apply text-gray-500 dark:text-gray-400;
+}
+
+.dark-calendar {
+  --calendar-bg: transparent;
+  --calendar-color: white;
+  --calendar-border-color: rgba(255, 255, 255, 0.2);
+  --calendar-header-bg: transparent;
+  --calendar-header-color: white;
+  --calendar-weekday-color: rgba(255, 255, 255, 0.6);
+  --calendar-selected-bg: rgb(59, 130, 246);
+  --calendar-selected-color: white;
+  --calendar-today-bg: rgba(255, 255, 255, 0.05);
+  --calendar-today-color: white;
+}
+
+.dark-calendar .rdp-day_selected:not(.rdp-day_disabled):not(.rdp-day_outside) {
+  background-color: var(--calendar-selected-bg);
+  color: var(--calendar-selected-color);
+}
+
+.dark-calendar .rdp-day_today:not(.rdp-day_outside) {
+  background-color: var(--calendar-today-bg);
+  color: var(--calendar-today-color);
+}
