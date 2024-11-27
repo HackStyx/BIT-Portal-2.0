@@ -12,7 +12,7 @@ export function AdminSidebar({ open, setOpen, adminName, theme }) {
     { label: "Dashboard", icon: <FaHome />, href: "/admin/dashboard" },
     { label: "Students", icon: <FaUserGraduate />, href: "/admin/students" },
     { label: "Teachers", icon: <FaChalkboardTeacher />, href: "/admin/teachers" },
-    { label: "Fee", icon: <FaMoneyBill />, href: "/admin/fee" },
+    { label: "Fee", icon: <FaMoneyBill />, href: "/admin/fee" },  // Make sure this matches
     { label: "Exam", icon: <FaClipboard />, href: "/admin/exam" },
     { label: "Settings", icon: <FaCog />, href: "/admin/settings" },
   ];

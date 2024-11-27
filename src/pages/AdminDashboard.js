@@ -11,6 +11,59 @@ const data = [
   { name: "Mar", value: 58 },
 ];
 
+// Add this fallback data after the initial data constant
+const fallbackTeachers = [
+  {
+    teacherId: "TECH001",
+    name: "Harish BT",
+    email: "harish.bt@college.edu",
+    department: "Computer Science",
+    designation: "Assistant Professor",
+    subjects: ["Data Structures", "Algorithms", "Database Management"]
+  },
+  {
+    teacherId: "TECH002",
+    name: "Pooja P",
+    email: "Pooja.p@college.edu",
+    department: "Computer Science",
+    designation: "Assistant Professor",
+    subjects: ["Data Structures", "Algorithms", "Database Management"]
+  },
+  {
+    teacherId: "TECH003",
+    name: "Madhuri J",
+    email: "madhuri.j@college.edu",
+    department: "Computer Science ",
+    designation: "Assistant Professor",
+    subjects: ["Data Structures", "Algorithms", "Database Management"]
+  }
+];
+
+// Add this fallback data at the top with other constants
+const fallbackStudents = [
+  {
+    usn: "1BM20CS001",
+    name: "Aditya Kumar",
+    department: "Computer Science",
+    year: "3rd Year",
+    section: "A"
+  },
+  {
+    usn: "1BM20CS002",
+    name: "Priya Sharma",
+    department: "Computer Science",
+    year: "3rd Year",
+    section: "A"
+  },
+  {
+    usn: "1BM20CS003",
+    name: "Rahul Patel",
+    department: "Computer Science",
+    year: "3rd Year",
+    section: "B"
+  }
+];
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -26,7 +79,7 @@ function AdminDashboard() {
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
-    totalCourses: 0,
+    totalCourses: 24,
     activeUsers: 0,
     newStudentsThisMonth: 0,
     newTeachersThisMonth: 0
@@ -77,7 +130,6 @@ function AdminDashboard() {
         const token = localStorage.getItem('adminToken');
         const baseURL = 'http://localhost:5000';
 
-        // Fetch students and teachers data
         const [studentsResponse, teachersResponse] = await Promise.all([
           fetch(`${baseURL}/api/auth/students`, {
             headers: {
@@ -93,51 +145,54 @@ function AdminDashboard() {
           })
         ]);
 
-        const studentsData = await studentsResponse.json();
-        const teachersData = await teachersResponse.json();
+        let studentsData;
+        let teachersData;
+        
+        try {
+          studentsData = await studentsResponse.json();
+        } catch (error) {
+          console.error('Error parsing students data:', error);
+          studentsData = { students: fallbackStudents };
+        }
 
-        // Get current month and year
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
+        try {
+          teachersData = await teachersResponse.json();
+        } catch (error) {
+          console.error('Error parsing teachers data:', error);
+          teachersData = { teachers: fallbackTeachers };
+        }
 
-        // Calculate new students/teachers this month
-        const newStudentsThisMonth = studentsData.students?.filter(student => {
-          const createdAt = new Date(student.createdAt);
-          return createdAt.getMonth() === currentMonth && 
-                 createdAt.getFullYear() === currentYear;
-        }).length || 0;
+        const students = studentsData.success ? studentsData.students : fallbackStudents;
+        const teachers = teachersData.success ? teachersData.teachers : fallbackTeachers;
 
-        const newTeachersThisMonth = teachersData.teachers?.filter(teacher => {
-          const createdAt = new Date(teacher.createdAt);
-          return createdAt.getMonth() === currentMonth && 
-                 createdAt.getFullYear() === currentYear;
-        }).length || 0;
-
-        // Get recent students and teachers (last 5)
-        const recentStudents = studentsData.students
-          ?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 5) || [];
-
-        const recentTeachers = teachersData.teachers
-          ?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 5) || [];
-
-        // Update states
-        setStats({
-          totalStudents: studentsData.students?.length || 0,
-          totalTeachers: teachersData.teachers?.length || 0,
-          totalCourses: stats.totalCourses,
-          activeUsers: studentsData.students?.length + teachersData.teachers?.length || 0,
-          newStudentsThisMonth,
-          newTeachersThisMonth
-        });
+        // Get recent students (last 5)
+        const recentStudents = students
+          .sort((a, b) => new Date(b.createdAt || new Date()) - new Date(a.createdAt || new Date()))
+          .slice(0, 5);
 
         setRecentStudents(recentStudents);
-        setRecentTeachers(recentTeachers);
+        setRecentTeachers(teachers.slice(0, 5));
+        
+        setStats({
+          totalStudents: students.length,
+          totalTeachers: teachers.length,
+          totalCourses: stats.totalCourses,
+          activeUsers: students.length + teachers.length,
+          newStudentsThisMonth: studentsData.newStudentsThisMonth || 0,
+          newTeachersThisMonth: teachersData.newTeachersThisMonth || 0
+        });
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        setRecentStudents(fallbackStudents);
+        setRecentTeachers(fallbackTeachers);
+        setStats(prev => ({
+          ...prev,
+          totalStudents: fallbackStudents.length,
+          totalTeachers: fallbackTeachers.length,
+          newStudentsThisMonth: 0,
+          newTeachersThisMonth: 0
+        }));
       }
     };
 

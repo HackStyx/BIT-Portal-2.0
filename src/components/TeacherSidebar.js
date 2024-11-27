@@ -79,11 +79,9 @@ export function TeacherSidebar({ open, setOpen, onLogout, teacherName, theme }) 
               }`}
             >
               <div className="w-6 flex items-center justify-center">
-                <span className={`text-lg transition-all duration-300 ${
+                <span className={`text-lg ${
                   location.pathname === link.href
-                    ? theme === 'dark'
-                      ? 'text-white'
-                      : 'text-white'
+                    ? 'text-white'
                     : theme === 'dark'
                     ? 'text-gray-300'
                     : 'text-gray-700'
@@ -92,17 +90,8 @@ export function TeacherSidebar({ open, setOpen, onLogout, teacherName, theme }) 
                 </span>
               </div>
               <motion.span
-                animate={{ 
-                  opacity: open ? 1 : 0, 
-                  x: open ? 0 : -8,
-                  display: open ? "block" : "none"
-                }}
-                transition={{ 
-                  duration: 0.4,
-                  ease: "easeOut",
-                  delay: open ? 0.2 : 0,
-                  display: { delay: open ? 0 : 0.4 }
-                }}
+                animate={{ opacity: open ? 1 : 0, x: open ? 0 : -8 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
                 className="ml-3 whitespace-nowrap overflow-hidden"
               >
                 {link.label}

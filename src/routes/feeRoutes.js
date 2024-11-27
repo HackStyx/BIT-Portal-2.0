@@ -2,16 +2,45 @@ const express = require('express');
 const router = express.Router();
 const Fee = require('../models/Fee');
 
-// GET all fees
-router.get('/fee/records', async (req, res) => {
+// GET all fee records (for admin)
+router.get('/fee/all', async (req, res) => {
   try {
-    console.log('Fetching fee records...');
+    console.log('Fetching all fee records...');
     const feeRecords = await Fee.find().sort({ createdAt: -1 });
     console.log('Found fee records:', feeRecords);
-    res.json({ success: true, feeRecords });
+    
+    res.json({ 
+      success: true, 
+      feeRecords: feeRecords 
+    });
   } catch (error) {
     console.error('Error fetching fees:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// GET fee records for a specific student
+router.get('/fee/records', async (req, res) => {
+  try {
+    const { studentId } = req.query;
+    console.log('Fetching fee records for student:', studentId);
+
+    const feeRecords = await Fee.find({ studentId: studentId }).sort({ createdAt: -1 });
+    console.log('Found fee records for student:', feeRecords);
+    
+    res.json({ 
+      success: true, 
+      feeRecords: feeRecords 
+    });
+  } catch (error) {
+    console.error('Error fetching fees:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 });
 

@@ -1,15 +1,19 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FaHome, FaCalendar, FaDollarSign, FaBook, FaComments, FaInfoCircle, FaSignOutAlt } from 'react-icons/fa';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export function Sidebar({ open, setOpen, onLogout, studentName, theme }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const links = [
     { label: "Dashboard", icon: <FaHome />, href: "/dashboard" },
-    { label: "Attendance", icon: <FaCalendar />, href: "#" },
-    { label: "Fee Section", icon: <FaDollarSign />, href: "#" },
-    { label: "IA Marks", icon: <FaBook />, href: "#" },
-    { label: "Feedback", icon: <FaComments />, href: "#" },
-    { label: "About", icon: <FaInfoCircle />, href: "#" },
+    { label: "Attendance", icon: <FaCalendar />, href: "/attendance" },
+    { label: "Fee Section", icon: <FaDollarSign />, href: "/fees" },
+    { label: "IA Marks", icon: <FaBook />, href: "/marks" },
+    { label: "Feedback", icon: <FaComments />, href: "/feedback" },
+    { label: "About", icon: <FaInfoCircle />, href: "/about" },
   ];
 
   return (
@@ -52,9 +56,16 @@ export function Sidebar({ open, setOpen, onLogout, studentName, theme }) {
           {links.map((link, idx) => (
             <motion.a
               key={idx}
-              href={link.href}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate(link.href);
+              }}
               className={`flex items-center h-12 px-3 rounded-lg transition-colors ${
-                theme === 'dark'
+                location.pathname === link.href
+                  ? theme === 'dark'
+                    ? 'bg-white/10 text-white'
+                    : 'bg-blue-600 text-white'
+                  : theme === 'dark'
                   ? 'text-gray-300 hover:bg-white/10'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
