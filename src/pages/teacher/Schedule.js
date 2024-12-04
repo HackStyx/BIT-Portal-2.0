@@ -1,7 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Clock, Calendar, Users } from 'lucide-react';
+import { Clock, Calendar, Users, Code, Monitor, Coffee, BookOpen, Database, Terminal, MapPin } from 'lucide-react';
 import TeacherLayout from '../../components/layouts/TeacherLayout';
+
+const dayColors = {
+  SUN: {
+    bg: 'bg-rose-500',
+    gradient: 'from-rose-500/10 to-orange-500/10',
+    text: 'text-rose-500'
+  },
+  MON: {
+    bg: 'bg-blue-500',
+    gradient: 'from-blue-500/10 to-cyan-500/10',
+    text: 'text-blue-500'
+  },
+  TUE: {
+    bg: 'bg-purple-500',
+    gradient: 'from-purple-500/10 to-pink-500/10',
+    text: 'text-purple-500'
+  },
+  WED: {
+    bg: 'bg-green-500',
+    gradient: 'from-green-500/10 to-emerald-500/10',
+    text: 'text-green-500'
+  },
+  THU: {
+    bg: 'bg-yellow-500',
+    gradient: 'from-yellow-500/10 to-amber-500/10',
+    text: 'text-yellow-500'
+  },
+  FRI: {
+    bg: 'bg-indigo-500',
+    gradient: 'from-indigo-500/10 to-violet-500/10',
+    text: 'text-indigo-500'
+  },
+  SAT: {
+    bg: 'bg-gray-500',
+    gradient: 'from-gray-500/10 to-slate-500/10',
+    text: 'text-gray-500'
+  }
+};
 
 function Schedule() {
   const [theme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -12,31 +50,67 @@ function Schedule() {
   useEffect(() => {
     const fetchScheduleData = async () => {
       try {
-        // Mock data - replace with actual API call
-        const mockData = [
+        // Updated schedule data
+        const updatedScheduleData = [
           {
-            day: 'Monday',
+            day: "SUN",
             classes: [
-              { time: '9:00 AM - 10:00 AM', subject: 'Mathematics', class: 'X-A', room: '101' },
-              { time: '11:00 AM - 12:00 PM', subject: 'Physics', class: 'XI-B', room: '203' },
+              { time: "11:00 AM", subject: "Break", type: "break" },
+              { time: "1:30 PM", subject: "Break", type: "break" },
+              { time: "2:00 PM", subject: "Teacher's Meeting", location: "Staff Room-505", type: "meeting", icon: <Users className="h-4 w-4" /> },
+              { time: "3:00 PM", subject: "Software Engineering", location: "502", type: "engineering", icon: <Code className="h-4 w-4" /> }
             ]
           },
           {
-            day: 'Tuesday',
+            day: "MON",
             classes: [
-              { time: '10:00 AM - 11:00 AM', subject: 'Chemistry', class: 'XII-A', room: '301' },
-              { time: '2:00 PM - 3:00 PM', subject: 'Mathematics', class: 'XI-A', room: '102' },
+              { time: "9:00 AM", subject: "Software Engineering", location: "502", type: "engineering", icon: <Code className="h-4 w-4" /> },
+              { time: "10:00 AM", subject: "Electrical Engineering", location: "NMB-301", type: "engineering", icon: <Monitor className="h-4 w-4" /> },
+              { time: "11:00 AM", subject: "Break", type: "break" },
+              { time: "1:30 PM", subject: "Break", type: "break" },
+              { time: "2:00 PM", subject: "Software Engineering", location: "502", type: "engineering", icon: <Code className="h-4 w-4" /> },
+              { time: "3:00 PM", subject: "Electrical Engineering", location: "NMB-301", type: "engineering", icon: <Monitor className="h-4 w-4" /> }
             ]
           },
           {
-            day: 'Wednesday',
+            day: "TUE",
             classes: [
-              { time: '9:00 AM - 10:00 AM', subject: 'Physics', class: 'X-B', room: '201' },
-              { time: '11:00 AM - 12:00 PM', subject: 'Mathematics', class: 'XII-B', room: '103' },
+              { time: "9:00 AM", subject: "Operating System Lab", location: "526", type: "lab", icon: <Monitor className="h-4 w-4" /> },
+              { time: "11:00 AM", subject: "Break", type: "break" },
+              { time: "12:30 PM", subject: "Software Engineering", location: "511", type: "engineering", icon: <Code className="h-4 w-4" /> },
+              { time: "1:30 PM", subject: "Break", type: "break" },
+              { time: "2:00 PM", subject: "C Programming Lab", location: "518", type: "lab", icon: <Code className="h-4 w-4" /> }
             ]
-          }
+          },
+          {
+            day: "WED",
+            classes: [
+              { time: "9:00 AM", subject: "Coffee Chat", type: "chat", icon: <Coffee className="h-4 w-4" /> },
+              { time: "11:00 AM", subject: "Break", type: "break" },
+              { time: "1:30 PM", subject: "Break", type: "break" }
+            ]
+          },
+          {
+            day: "THU",
+            classes: [
+              { time: "11:00 AM", subject: "Break", type: "break" },
+              { time: "12:30 PM", subject: "Design Review", type: "engineering", icon: <BookOpen className="h-4 w-4" /> },
+              { time: "1:30 PM", subject: "Break", type: "break" }
+            ]
+          },
+          {
+            day: "FRI",
+            classes: [
+              { time: "10:00 AM", subject: "Electrical Engineering", location: "NMB-301", type: "engineering", icon: <Monitor className="h-4 w-4" /> },
+              { time: "11:00 AM", subject: "Break", type: "break" },
+              { time: "12:30 PM", subject: "Data Visualization", location: "511", type: "engineering", icon: <Database className="h-4 w-4" /> },
+              { time: "1:30 PM", subject: "Break", type: "break" },
+              { time: "2:00 PM", subject: "Teacher's Meeting", location: "Staff Room-505", type: "meeting", icon: <Users className="h-4 w-4" /> },
+              { time: "3:00 PM", subject: "Python Lab", location: "518", type: "lab", icon: <Terminal className="h-4 w-4" /> }
+            ]
+          },
         ];
-        setScheduleData(mockData);
+        setScheduleData(updatedScheduleData);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching schedule:', error);
@@ -46,6 +120,27 @@ function Schedule() {
 
     fetchScheduleData();
   }, []);
+
+  const getTypeStyles = (type, theme) => {
+    const styles = {
+      break: theme === 'dark' 
+        ? 'bg-gray-500/20 text-gray-300' 
+        : 'bg-gray-100 text-gray-600',
+      meeting: theme === 'dark'
+        ? 'bg-purple-500/20 text-purple-300'
+        : 'bg-purple-100 text-purple-600',
+      engineering: theme === 'dark'
+        ? 'bg-green-500/20 text-green-300'
+        : 'bg-green-100 text-green-600',
+      lab: theme === 'dark'
+        ? 'bg-yellow-500/20 text-yellow-300'
+        : 'bg-yellow-100 text-yellow-600',
+      chat: theme === 'dark'
+        ? 'bg-pink-500/20 text-pink-300'
+        : 'bg-pink-100 text-pink-600'
+    };
+    return styles[type] || styles.break;
+  };
 
   const content = (
     <motion.div 
@@ -133,41 +228,72 @@ function Schedule() {
             }`}
           >
             {scheduleData.map((day, index) => (
-              <div key={day.day} className={`${
-                index !== 0 ? 'border-t border-white/10' : ''
-              }`}>
-                <div className={`p-4 ${
-                  theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'
-                }`}>
-                  <h2 className={`text-xl font-bold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-800'
-                  }`}>{day.day}</h2>
+              <div key={day.day} className="mb-8 last:mb-0">
+                <div className={`flex items-center gap-4 mb-4`}>
+                  <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl ${dayColors[day.day].bg} ${theme === 'dark' ? 'bg-opacity-20' : 'bg-opacity-10'}`}>
+                    <span className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : dayColors[day.day].text}`}>
+                      {day.day}
+                    </span>
+                  </div>
+                  <div className="h-0.5 flex-1 bg-gradient-to-r opacity-20 rounded-full" 
+                       style={{
+                         background: `linear-gradient(to right, ${theme === 'dark' ? 'white' : 'black'}, transparent)`
+                       }}
+                  />
                 </div>
-                <div className="p-4 space-y-4">
+                
+                <div className="space-y-4">
                   {day.classes.map((classItem, classIndex) => (
                     <motion.div
                       key={classIndex}
                       whileHover={{ scale: 1.01 }}
-                      className={`p-5 rounded-xl ${
+                      className={`p-5 rounded-xl border ${
                         theme === 'dark' 
-                          ? 'bg-white/5 hover:bg-white/10' 
-                          : 'bg-gray-50 hover:bg-gray-100'
-                      } transition-all duration-300`}
+                          ? 'bg-white/5 hover:bg-white/10 border-white/10' 
+                          : 'bg-white hover:bg-gray-50 border-gray-100'
+                      } transition-all duration-300 shadow-lg`}
                     >
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className={`text-base font-medium ${
-                            theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-                          }`}>{classItem.time}</p>
-                          <h3 className={`text-xl font-bold mt-2 ${
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1.5 rounded-lg font-medium ${
+                              theme === 'dark' 
+                                ? 'bg-white/10 text-white' 
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {classItem.time}
+                            </span>
+                            {classItem.type && (
+                              <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${
+                                getTypeStyles(classItem.type, theme)
+                              }`}>
+                                {classItem.type}
+                              </span>
+                            )}
+                          </div>
+                          <h3 className={`text-lg font-semibold mt-3 ${
                             theme === 'dark' ? 'text-white' : 'text-gray-800'
-                          }`}>{classItem.subject}</h3>
-                          <p className={`text-base mt-1 ${
-                            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                           }`}>
-                            Class {classItem.class} • Room {classItem.room}
-                          </p>
+                            {classItem.subject}
+                          </h3>
+                          {classItem.location && (
+                            <p className={`flex items-center mt-2 ${
+                              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                              <MapPin className="w-4 h-4 mr-1.5" />
+                              {classItem.location}
+                            </p>
+                          )}
                         </div>
+                        {classItem.icon && (
+                          <div className={`p-3 rounded-xl ${
+                            theme === 'dark' 
+                              ? 'bg-white/10' 
+                              : 'bg-gray-100'
+                          }`}>
+                            {classItem.icon}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   ))}

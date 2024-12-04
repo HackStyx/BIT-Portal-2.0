@@ -24,6 +24,7 @@ import Attendance from './pages/teacher/Attendance';
 import MarksEntry from './pages/teacher/MarksEntry';
 import Classes from './pages/teacher/Classes';
 import Settings from './pages/admin/Settings';
+import { AttendanceProvider } from './contexts/AttendanceContext';
 
 
 function PrivateRoute({ children, role = 'student' }) {
@@ -40,95 +41,97 @@ function App() {
   };
 
   return (
-    <AvatarProvider>
-      <AdminAuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<LoginPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
-                  <DashboardPage />
-                </PrivateRoute>
-              }
-            />
-            <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedAdminRoute>
-                  <AdminDashboard />
-                </ProtectedAdminRoute>
-              }
-            />
-            <Route path="/admin/students" element={<StudentsPage />} />
-            <Route path="/admin/teachers/*" element={<TeachersPage />} />
-            <Route path="/admin/fee" element={<FeePageAdmin />} />
-            <Route path="/admin/exam" element={<ExamPage />} />
-            <Route path="/teacher/login" element={<TeacherLoginPage />} />
-            
-            <Route
-              path="/teacher/dashboard"
-              element={
-                <PrivateRoute role="teacher">
-                  <TeacherDashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/teacher/schedule"
-              element={
-                <PrivateRoute role="teacher">
-                  <Schedule />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/teacher/attendance"
-              element={
-                <PrivateRoute role="teacher">
-                  <Attendance />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/teacher/marks"
-              element={
-                <PrivateRoute role="teacher">
-                  <MarksEntry />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/teacher/classes"
-              element={
-                <PrivateRoute role="teacher">
-                  <Classes />
-                </PrivateRoute>
-              }
-            />
+    <AttendanceProvider>
+      <AvatarProvider>
+        <AdminAuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<LoginPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <PrivateRoute>
+                    <DashboardPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route path="/admin/login" element={<AdminLoginPage />} />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedAdminRoute>
+                    <AdminDashboard />
+                  </ProtectedAdminRoute>
+                }
+              />
+              <Route path="/admin/students" element={<StudentsPage />} />
+              <Route path="/admin/teachers/*" element={<TeachersPage />} />
+              <Route path="/admin/fee" element={<FeePageAdmin />} />
+              <Route path="/admin/exam" element={<ExamPage />} />
+              <Route path="/teacher/login" element={<TeacherLoginPage />} />
+              
+              <Route
+                path="/teacher/dashboard"
+                element={
+                  <PrivateRoute role="teacher">
+                    <TeacherDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/schedule"
+                element={
+                  <PrivateRoute role="teacher">
+                    <Schedule />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/attendance"
+                element={
+                  <PrivateRoute role="teacher">
+                    <Attendance />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/marks"
+                element={
+                  <PrivateRoute role="teacher">
+                    <MarksEntry />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/teacher/classes"
+                element={
+                  <PrivateRoute role="teacher">
+                    <Classes />
+                  </PrivateRoute>
+                }
+              />
 
 
-            <Route path="/fees" element={<FeePage />} />
-            <Route path="/marks" element={<MarksPage />} />
-            <Route path="/attendance" element={<AttendancePage />} />
-            <Route path="/feedback" element={<FeedbackPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route
-              path="/admin/settings"
-              element={
-                <ProtectedAdminRoute>
-                  <Settings />
-                </ProtectedAdminRoute>
-              }
-            />
+              <Route path="/fees" element={<FeePage />} />
+              <Route path="/marks" element={<MarksPage />} />
+              <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/feedback" element={<FeedbackPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedAdminRoute>
+                    <Settings />
+                  </ProtectedAdminRoute>
+                }
+              />
 
-            {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
-          </Routes>
-        </Router>
-      </AdminAuthProvider>
-    </AvatarProvider>
+              {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
+            </Routes>
+          </Router>
+        </AdminAuthProvider>
+      </AvatarProvider>
+    </AttendanceProvider>
   );
 }
 

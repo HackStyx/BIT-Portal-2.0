@@ -1,16 +1,60 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Star, ChevronRight } from 'lucide-react';
 import { Sidebar } from '../../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
+
+const feedbackQuestions = [
+  "The teacher seems genuinely interested in teaching.",
+  "The teacher comes to the class in time with well preparation and utilizes the complete class hour fruitfully towards teaching learning.",
+  "The teacher has a good command of course material with well-organized presentation.",
+  "The Teacher presents material clearly with the needs of students and examination.",
+  "The teacher uses the class room language with words and expressions within the students' level of understanding.",
+  "The teacher encourages the students to ask questions and motivate them through real world examples.",
+  "The teacher Rapport with students with respect to academics.",
+  "The teacher organizes and presents the concepts towards the course objectives and course outcomes defined.",
+  "The teacher is readily available for consultation with students.",
+  "The teacher's Behavior, Sincerity and Overall Teaching effectiveness"
+];
+
+const subjects = [
+  {
+    section: 'B',
+    code: 'BCS501',
+    name: 'Software Engineering and Project Management',
+    faculty: 'Manjunath H',
+    status: 'Pending'
+  },
+  {
+    section: 'B',
+    code: 'BCS502',
+    name: 'Computer Networks',
+    faculty: 'Nagamani D R',
+    status: 'Pending'
+  },
+  {
+    section: 'B',
+    code: 'BCS503',
+    name: 'Theory of Computation',
+    faculty: 'Sunanda H G',
+    status: 'Pending'
+  },
+  {
+    section: 'B',
+    code: 'BCS515B',
+    name: 'Artificial Intelligence',
+    faculty: 'Bhargavi M S',
+    status: 'Pending'
+  }
+];
 
 function FeedbackPage() {
-  const [studentData, setStudentData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [ratings, setRatings] = useState({});
   const [theme] = useState(() => localStorage.getItem('theme') || 'dark');
-  const [feedback, setFeedback] = useState('');
+  const [studentData, setStudentData] = useState(null);
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -20,21 +64,13 @@ function FeedbackPage() {
           navigate('/login');
           return;
         }
-
-        // Replace with your actual API endpoint
-        const response = await fetch(`http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/student/${usn}`);
+        const response = await fetch(`http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/auth/student/${usn}`);
         const data = await response.json();
-
         if (data.success) {
           setStudentData(data.student);
-        } else {
-          setError('Failed to fetch student data');
         }
       } catch (error) {
         console.error('Error fetching student data:', error);
-        setError('Failed to load student information');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -47,18 +83,19 @@ function FeedbackPage() {
     navigate('/', { replace: true });
   };
 
-  const handleSubmitFeedback = async (e) => {
-    e.preventDefault();
-    // Add your feedback submission logic here
+  const handleRating = (questionIndex, rating) => {
+    setRatings(prev => ({
+      ...prev,
+      [`${selectedSubject?.code}-${questionIndex}`]: rating
+    }));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-r from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
-  }
+  const handleSubmit = () => {
+    // Handle submission logic here
+    console.log('Submitted ratings:', ratings);
+    setSelectedSubject(null);
+    setRatings({});
+  };
 
   return (
     <div className={`flex h-screen ${theme === 'dark' ? 'bg-[#111111]' : 'bg-gray-50'}`}>
@@ -86,33 +123,185 @@ function FeedbackPage() {
         <main className={`flex-1 overflow-x-hidden overflow-y-auto p-6 ${
           theme === 'dark' ? 'bg-[#111111]' : 'bg-gray-50'
         }`}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className={`p-6 rounded-lg shadow-lg border ${
-              theme === 'dark'
-                ? 'bg-white/10 border-white/20'
-                : 'bg-white border-gray-200'
-            }`}>
-              <MessageSquare className={`h-8 w-8 ${theme === 'dark' ? 'text-yellow-500' : 'text-yellow-600'} mb-2`} />
-              <h3 className={`text-xl font-semibold mb-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-800'
-              }`}>Feedback</h3>
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Enter your feedback here..."
-                className={`w-full h-32 p-2 border ${
-                  theme === 'dark' ? 'bg-white/10 border-white/20' : 'bg-white border-gray-200'
-                } rounded-lg`}
-              />
-            </div>
-          </div>
+          <div className="max-w-7xl mx-auto">
+            {!selectedSubject ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={`rounded-xl border overflow-hidden ${
+                  theme === 'dark' ? 'border-white/10' : 'border-gray-200'
+                }`}
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className={`${
+                      theme === 'dark' 
+                        ? 'bg-gradient-to-r from-blue-900/50 via-purple-900/50 to-blue-900/50' 
+                        : 'bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50'
+                    }`}>
+                      <tr>
+                        <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                          theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
+                        }`}>Section</th>
+                        <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                          theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
+                        }`}>Subject</th>
+                        <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                          theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
+                        }`}>Faculty</th>
+                        <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                          theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
+                        }`}>Status</th>
+                        <th className={`px-6 py-4 text-left text-sm font-semibold ${
+                          theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
+                        }`}></th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${
+                      theme === 'dark' ? 'divide-white/5' : 'divide-gray-100'
+                    }`}>
+                      {subjects.map((subject, index) => (
+                        <tr
+                          key={index}
+                          onClick={() => setSelectedSubject(subject)}
+                          className={`cursor-pointer transition-all duration-200 ${
+                            theme === 'dark'
+                              ? 'hover:bg-white/5 even:bg-white/[0.02]'
+                              : 'hover:bg-gray-50 even:bg-gray-50/50'
+                          }`}
+                        >
+                          <td className={`px-6 py-4 text-sm ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                          }`}>{subject.section}</td>
+                          <td className={`px-6 py-4 ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                          }`}>
+                            <div className="font-medium">{subject.code}</div>
+                            <div className={`text-sm ${
+                              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                            }`}>{subject.name}</div>
+                          </td>
+                          <td className={`px-6 py-4 text-sm ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                          }`}>{subject.faculty}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              subject.status === 'Pending'
+                                ? 'bg-yellow-100/10 text-yellow-500'
+                                : 'bg-green-100/10 text-green-500'
+                            }`}>
+                              {subject.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <ChevronRight className={`w-5 h-5 ${
+                              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                            }`} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-6"
+              >
+                <div className={`p-6 rounded-xl border ${
+                  theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'
+                }`}>
+                  <h2 className={`text-xl font-semibold mb-4 ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {selectedSubject.code} - {selectedSubject.name}
+                  </h2>
+                  <p className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Faculty: {selectedSubject.faculty}
+                  </p>
+                </div>
 
-          <button
-            onClick={handleSubmitFeedback}
-            className={`mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600`}
-          >
-            Submit Feedback
-          </button>
+                <div className={`p-6 rounded-xl border ${
+                  theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'
+                }`}>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className={`text-lg font-semibold ${
+                      theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      Feedback Questions
+                    </h3>
+                    <div className={`text-sm ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      1 → Lowest &nbsp;&nbsp; 5 → Excellent
+                    </div>
+                  </div>
+                  <div className="space-y-8">
+                    {feedbackQuestions.map((question, index) => (
+                      <div key={index} className="space-y-3">
+                        <p className={`text-sm ${
+                          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        }`}>
+                          {index + 1}. {question}
+                        </p>
+                        <div className="flex gap-4">
+                          {[1, 2, 3, 4, 5].map((rating) => {
+                            const currentRating = ratings[`${selectedSubject.code}-${index}`] || 0;
+                            const isSelected = rating <= currentRating;
+                            
+                            return (
+                              <button
+                                key={rating}
+                                onClick={() => handleRating(index, rating)}
+                                className={`group p-2 rounded-full transition-all duration-200 ${
+                                  theme === 'dark'
+                                    ? 'hover:bg-white/10'
+                                    : 'hover:bg-gray-100'
+                                }`}
+                              >
+                                <Star 
+                                  className={`h-6 w-6 transition-colors duration-200 ${
+                                    isSelected
+                                      ? 'text-yellow-400 fill-yellow-400'
+                                      : theme === 'dark'
+                                        ? 'text-gray-600 group-hover:text-gray-400'
+                                        : 'text-gray-400 group-hover:text-gray-600'
+                                  }`}
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-between gap-4">
+                  <button
+                    onClick={() => setSelectedSubject(null)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-white/10 hover:bg-white/20 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                    }`}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                  >
+                    Submit Feedback
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </main>
       </div>
     </div>

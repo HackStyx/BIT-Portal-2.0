@@ -6,17 +6,21 @@ import TeacherLayout from '../../components/layouts/TeacherLayout';
 function Attendance() {
   const [theme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedClass, setSelectedClass] = useState('X-A');
+  const [selectedYear, setSelectedYear] = useState('1');
+  const [selectedSection, setSelectedSection] = useState('A');
+  const [selectedSubject, setSelectedSubject] = useState('Mathematics');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const mockStudents = [
-    { id: 1, name: 'John Doe', rollNo: '001', status: 'present' },
-    { id: 2, name: 'Jane Smith', rollNo: '002', status: 'absent' },
-    { id: 3, name: 'Mike Johnson', rollNo: '003', status: 'present' },
+    { id: 1, name: 'Nishchay J', rollNo: '001', status: 'present' },
+    { id: 2, name: 'Sudhanshu Kumar', rollNo: '002', status: 'absent' },
+    { id: 3, name: 'Harshit', rollNo: '003', status: 'present' },
     // Add more mock students
   ];
 
-  const classes = ['X-A', 'X-B', 'XI-A', 'XI-B', 'XII-A', 'XII-B'];
+  const years = ['1', '2', '3', '4'];
+  const sections = ['A', 'B', 'C'];
+  const subjects = ['DSA', 'Java', 'DBMS', 'OS', 'CN'];
 
   const [students, setStudents] = useState(mockStudents);
 
@@ -25,6 +29,12 @@ function Attendance() {
       student.id === studentId ? { ...student, status } : student
     ));
   };
+
+  // Calculate attendance statistics
+  const totalStudents = students.length;
+  const presentStudents = students.filter(student => student.status === 'present').length;
+  const absentStudents = students.filter(student => student.status === 'absent').length;
+  const presentPercentage = ((presentStudents / totalStudents) * 100).toFixed(2);
 
   const content = (
     <motion.div 
@@ -56,16 +66,65 @@ function Attendance() {
                 : 'bg-white border-gray-200 hover:bg-gray-50'
             } transition-all duration-300`}
           >
+            <Users className={`h-8 w-8 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mb-3`} />
+            <h3 className={`text-xl font-semibold mb-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-800'
+            }`}>Total Students</h3>
+            <p className={`text-3xl font-bold ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+            }`}>{totalStudents}</p>
+          </motion.div>
+
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            className={`p-6 rounded-xl shadow-lg border backdrop-blur-sm ${
+              theme === 'dark'
+                ? 'bg-white/10 border-white/20 hover:bg-white/15'
+                : 'bg-white border-gray-200 hover:bg-gray-50'
+            } transition-all duration-300`}
+          >
             <UserCheck className={`h-8 w-8 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mb-3`} />
             <h3 className={`text-xl font-semibold mb-2 ${
               theme === 'dark' ? 'text-white' : 'text-gray-800'
-            }`}>Present Today</h3>
+            }`}>Present Students</h3>
             <p className={`text-3xl font-bold ${
               theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>28</p>
+            }`}>{presentStudents}</p>
           </motion.div>
 
-          {/* Add more stat cards */}
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            className={`p-6 rounded-xl shadow-lg border backdrop-blur-sm ${
+              theme === 'dark'
+                ? 'bg-white/10 border-white/20 hover:bg-white/15'
+                : 'bg-white border-gray-200 hover:bg-gray-50'
+            } transition-all duration-300`}
+          >
+            <Users className={`h-8 w-8 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'} mb-3`} />
+            <h3 className={`text-xl font-semibold mb-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-800'
+            }`}>Absent Students</h3>
+            <p className={`text-3xl font-bold ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+            }`}>{absentStudents}</p>
+          </motion.div>
+
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            className={`p-6 rounded-xl shadow-lg border backdrop-blur-sm ${
+              theme === 'dark'
+                ? 'bg-white/10 border-white/20 hover:bg-white/15'
+                : 'bg-white border-gray-200 hover:bg-gray-50'
+            } transition-all duration-300`}
+          >
+            <Calendar className={`h-8 w-8 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'} mb-3`} />
+            <h3 className={`text-xl font-semibold mb-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-800'
+            }`}>Present Percentage</h3>
+            <p className={`text-3xl font-bold ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
+            }`}>{presentPercentage}%</p>
+          </motion.div>
         </div>
 
         {/* Controls */}
@@ -74,24 +133,64 @@ function Attendance() {
             ? 'bg-white/10 border-white/20'
             : 'bg-white border-gray-200'
         }`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
               <label className={`block text-sm font-medium mb-2 ${
                 theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
               }`}>
-                Select Class
+                Select Year
               </label>
               <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
                 className={`w-full p-2 rounded-lg border ${
                   theme === 'dark'
-                    ? 'bg-white/5 border-white/10 text-white'
+                    ? 'bg-gray-800 border-gray-600 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
                 }`}
               >
-                {classes.map((cls) => (
-                  <option key={cls} value={cls}>{cls}</option>
+                {years.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                Select Section
+              </label>
+              <select
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+                className={`w-full p-2 rounded-lg border ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 border-gray-600 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {sections.map((section) => (
+                  <option key={section} value={section}>{section}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                Select Subject
+              </label>
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className={`w-full p-2 rounded-lg border ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 border-gray-600 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {subjects.map((subject) => (
+                  <option key={subject} value={subject}>{subject}</option>
                 ))}
               </select>
             </div>

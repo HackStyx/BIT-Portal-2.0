@@ -38,7 +38,7 @@ function ExamPage() {
       }
 
       console.log('Fetching exams...');
-      const response = await fetch('http://localhost:5000/api/exams', {
+      const response = await fetch('http://localhost:5000/api/exam/all', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -95,8 +95,8 @@ function ExamPage() {
       }
 
       const url = isEditing 
-        ? `http://localhost:5000/api/exams/${newExam._id}`
-        : 'http://localhost:5000/api/exams';
+        ? `http://localhost:5000/api/exam/${newExam._id}`
+        : 'http://localhost:5000/api/exam';
 
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',
@@ -128,6 +128,7 @@ function ExamPage() {
         setError(data.message || 'Operation failed');
       }
     } catch (error) {
+      console.error('Submit error:', error);
       setError('Operation failed. Please try again.');
     }
   };
@@ -146,7 +147,7 @@ function ExamPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/exams/${examId}`, {
+      const response = await fetch(`http://localhost:5000/api/exam/${examId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

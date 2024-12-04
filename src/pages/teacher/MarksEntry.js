@@ -6,29 +6,35 @@ import TeacherLayout from '../../components/layouts/TeacherLayout';
 function MarksEntry() {
   const [theme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedClass, setSelectedClass] = useState('X-A');
+  const [selectedYear, setSelectedYear] = useState('First Year');
   const [selectedSubject, setSelectedSubject] = useState('Mathematics');
   const [selectedExam, setSelectedExam] = useState('Mid Term');
 
   const mockStudents = [
-    { id: 1, name: 'John Doe', rollNo: '001', marks: '', maxMarks: 100 },
-    { id: 2, name: 'Jane Smith', rollNo: '002', marks: '', maxMarks: 100 },
-    { id: 3, name: 'Mike Johnson', rollNo: '003', marks: '', maxMarks: 100 },
-    { id: 4, name: 'Sarah Williams', rollNo: '004', marks: '', maxMarks: 100 },
-    { id: 5, name: 'David Brown', rollNo: '005', marks: '', maxMarks: 100 },
+    { id: 1, name: 'Nishchay J', rollNo: '001', marks: '', maxMarks: 100 },
+    { id: 2, name: 'Harshit', rollNo: '002', marks: '', maxMarks: 100 },
+    { id: 3, name: 'Sudhanshu Kumar', rollNo: '003', marks: '', maxMarks: 100 }
   ];
 
-  const classes = ['X-A', 'X-B', 'XI-A', 'XI-B', 'XII-A', 'XII-B'];
-  const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English'];
+  const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
+  const subjects = ['Data Structures', 'Algorithms', 'Operating Systems', 'Database Systems', 'Computer Networks'];
   const examTypes = ['Mid Term', 'Final Term', 'Unit Test', 'Project'];
 
   const [students, setStudents] = useState(mockStudents);
+  const [maxMarks, setMaxMarks] = useState(100);
 
   const handleMarksChange = (studentId, marks) => {
-    if (marks === '' || (Number(marks) >= 0 && Number(marks) <= 100)) {
+    if (marks === '' || (Number(marks) >= 0 && Number(marks) <= maxMarks)) {
       setStudents(students.map(student =>
         student.id === studentId ? { ...student, marks } : student
       ));
+    }
+  };
+
+  const handleMaxMarksChange = (newMaxMarks) => {
+    if (newMaxMarks === '' || (Number(newMaxMarks) > 0)) {
+      setMaxMarks(newMaxMarks);
+      setStudents(students.map(student => ({ ...student, maxMarks: newMaxMarks })));
     }
   };
 
@@ -134,19 +140,38 @@ function MarksEntry() {
               <label className={`block text-sm font-medium mb-2 ${
                 theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
               }`}>
-                Select Class
+                Select Year
               </label>
               <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
                 className={`w-full p-2 rounded-lg border ${
                   theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${theme === 'dark' ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
-                {classes.map((cls) => (
-                  <option key={cls} value={cls}>{cls}</option>
+                {years.map((year) => (
+                  <option 
+                    key={year} 
+                    value={year}
+                    className={`${
+                      theme === 'dark' 
+                        ? 'bg-gray-800 text-white' 
+                        : 'bg-white text-gray-900'
+                    } py-2`}
+                  >
+                    {year}
+                  </option>
                 ))}
               </select>
             </div>
@@ -163,10 +188,29 @@ function MarksEntry() {
                   theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${theme === 'dark' ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
                 {subjects.map((subject) => (
-                  <option key={subject} value={subject}>{subject}</option>
+                  <option 
+                    key={subject} 
+                    value={subject}
+                    className={`${
+                      theme === 'dark' 
+                        ? 'bg-gray-800 text-white' 
+                        : 'bg-white text-gray-900'
+                    } py-2`}
+                  >
+                    {subject}
+                  </option>
                 ))}
               </select>
             </div>
@@ -183,10 +227,29 @@ function MarksEntry() {
                   theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
-                }`}
+                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${theme === 'dark' ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
                 {examTypes.map((exam) => (
-                  <option key={exam} value={exam}>{exam}</option>
+                  <option 
+                    key={exam} 
+                    value={exam}
+                    className={`${
+                      theme === 'dark' 
+                        ? 'bg-gray-800 text-white' 
+                        : 'bg-white text-gray-900'
+                    } py-2`}
+                  >
+                    {exam}
+                  </option>
                 ))}
               </select>
             </div>
@@ -228,7 +291,7 @@ function MarksEntry() {
                         value={student.marks}
                         onChange={(e) => handleMarksChange(student.id, e.target.value)}
                         min="0"
-                        max="100"
+                        max={maxMarks}
                         className={`w-24 p-2 rounded-lg border ${
                           theme === 'dark'
                             ? 'bg-white/5 border-white/10 text-white'
@@ -236,7 +299,19 @@ function MarksEntry() {
                         }`}
                       />
                     </td>
-                    <td className="px-6 py-4">{student.maxMarks}</td>
+                    <td className="px-6 py-4">
+                      <input
+                        type="number"
+                        value={maxMarks}
+                        onChange={(e) => handleMaxMarksChange(e.target.value)}
+                        min="1"
+                        className={`w-24 p-2 rounded-lg border ${
+                          theme === 'dark'
+                            ? 'bg-white/5 border-white/10 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

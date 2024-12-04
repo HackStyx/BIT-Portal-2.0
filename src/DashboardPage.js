@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ThumbsUp, Share2, BookOpen } from 'lucide-react';
+import { Search, ThumbsUp, Share2, BookOpen, Calendar, Clock, Sun, Moon, User, LogOut, Settings, Mail, Phone, MapPin, Calculator, FileText } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { User, Settings } from 'lucide-react';
 import { useAvatar } from './contexts/AvatarContext';
+import { motion } from 'framer-motion';
 
 // Update these imports to match your project structure
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
@@ -12,6 +12,8 @@ import { Input } from "./components/ui/input";
 
 import { ProfileModal } from './components/ProfileModal';
 import { SettingsModal } from './components/SettingsModal';
+import { useAttendance } from './contexts/AttendanceContext';
+import { CGPACalculatorModal } from './components/CGPACalculatorModal';
 
 const getYearSuffix = (year) => {
   const yearNum = parseInt(year);
@@ -21,6 +23,24 @@ const getYearSuffix = (year) => {
     case 3: return 'rd';
     case 4: return 'th';
     default: return '';
+  }
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1
   }
 };
 
@@ -34,6 +54,9 @@ function DashboardPage() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { avatar } = useAvatar();
+  const { overallAttendance } = useAttendance();
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isCGPACalculatorOpen, setIsCGPACalculatorOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -77,6 +100,15 @@ function DashboardPage() {
 
     fetchStudentData();
   }, [navigate]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(timer);
+  }, []);
 
   const handleLogout = () => {
     try {
@@ -126,76 +158,134 @@ function DashboardPage() {
       
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className={`flex items-center justify-between p-4 border-b ${
+        <header className={`sticky top-0 z-50 w-full ${
           theme === 'dark' 
-            ? 'bg-[#111111] border-white/20' 
-            : 'bg-white border-gray-300'
-        }`}>
-          <div className="flex items-center">
-            <h1 className={`text-xl font-semibold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-800'
-            }`}>
-              Hello, {studentData?.name?.split(' ')[0] || 'Student'}! 👋
-            </h1>
-          </div>
-          <div className="flex items-center">
-            <div className="relative mr-4">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`} />
-              <Input 
-                type="search" 
-                placeholder="Search here..." 
-                className={`pl-10 pr-4 py-2 w-64 rounded-full transition-colors ${
-                  theme === 'dark' 
-                    ? 'bg-white/10 text-white border-white/20 hover:border-white/30' 
-                    : 'bg-gray-100 text-gray-900 border-gray-300 hover:border-gray-400'
-                }`}
-              />
+            ? 'bg-[#111111]/80 border-white/10' 
+            : 'bg-white/80 border-gray-200'
+        } border-b backdrop-blur-sm`}>
+          <div className="flex h-16 items-center justify-between px-6">
+            {/* Left side - Logo & Title */}
+            <div className="flex items-center gap-2">
+              <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Student Portal
+              </div>
             </div>
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <div className="cursor-pointer">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage 
-                      src={avatar}
-                      alt={studentData?.name || 'User'} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        console.log('Avatar image error:', e);
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                    <AvatarFallback>
-                      {studentData?.name?.charAt(0).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              </DropdownMenu.Trigger>
 
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content 
-                  className="min-w-[220px] bg-[#1A1A1A] rounded-md p-1 shadow-lg border border-white/20"
-                  sideOffset={5}
-                  align="end"
-                >
-                  <DropdownMenu.Item 
-                    className="flex items-center px-3 py-2 text-sm text-gray-200 hover:bg-white/10 rounded-md cursor-pointer outline-none"
-                    onClick={() => setIsProfileOpen(true)}
+            {/* Right side - Theme Toggle & Profile */}
+            <div className="flex items-center gap-4">
+              {/* Theme Toggle */}
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={`group relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 ${
+                  theme === 'dark'
+                    ? 'bg-white/10 hover:bg-white/20'
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                {theme === 'dark' ? (
+                  <Sun size={22} className="text-yellow-400" />
+                ) : (
+                  <Moon size={22} className="text-blue-600" />
+                )}
+              </button>
+
+              {/* Profile Dropdown */}
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button className="group relative flex items-center gap-2 rounded-full transition-all duration-300">
+                    <div className="relative h-10 w-10">
+                      <Avatar className="h-full w-full rounded-full ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-300">
+                        <AvatarImage 
+                          src={avatar} 
+                          alt={studentData?.name || 'User'} 
+                          className="h-full w-full object-cover"
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-medium">
+                          {studentData?.name?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-[#111111]" />
+                    </div>
+                  </button>
+                </DropdownMenu.Trigger>
+
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    className="w-[300px] rounded-xl p-2 shadow-xl bg-[#1A1A1A] border border-white/10"
+                    align="end"
+                    sideOffset={5}
                   >
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item 
-                    className="flex items-center px-3 py-2 text-sm text-gray-200 hover:bg-white/10 rounded-md cursor-pointer outline-none"
-                    onClick={() => setIsSettingsOpen(true)}
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+                    {/* Profile Card */}
+                    <div className="px-4 py-3">
+                      <div className="flex items-center gap-4 mb-4">
+                        <Avatar className="h-16 w-16 rounded-full ring-2 ring-white/20">
+                          <AvatarImage 
+                            src={avatar} 
+                            alt={studentData?.name || 'User'} 
+                            className="h-full w-full object-cover"
+                          />
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl font-medium">
+                            {studentData?.name?.charAt(0).toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="text-lg font-semibold text-white">
+                            {studentData?.name}
+                          </h3>
+                          <p className="text-sm text-gray-400">
+                            {studentData?.usn}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Quick Info */}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <BookOpen size={14} />
+                          <span>{studentData?.department || 'Computer Science'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <Mail size={14} />
+                          <span>{studentData?.email || 'student@example.com'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                          <MapPin size={14} />
+                          <span>{studentData?.section || 'Section A'}</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="h-px bg-white/10 my-2" />
+
+                      {/* Menu Items */}
+                      <div className="space-y-1">
+                        <DropdownMenu.Item
+                          className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer hover:bg-white/10 text-gray-200 transition-colors"
+                          onClick={() => setIsProfileOpen(true)}
+                        >
+                          <User size={16} />
+                          View Full Profile
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                          className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer hover:bg-white/10 text-gray-200 transition-colors"
+                          onClick={() => setIsSettingsOpen(true)}
+                        >
+                          <Settings size={16} />
+                          Settings
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                          className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer hover:bg-red-500/20 text-red-400 transition-colors"
+                          onClick={handleLogout}
+                        >
+                          <LogOut size={16} />
+                          Logout
+                        </DropdownMenu.Item>
+                      </div>
+                    </div>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </div>
           </div>
         </header>
 
@@ -203,139 +293,243 @@ function DashboardPage() {
         <main className={`flex-1 overflow-x-hidden overflow-y-auto p-6 ${
           theme === 'dark' ? 'bg-[#111111]' : 'bg-gray-50'
         }`}>
-          <h2 className={`text-2xl font-semibold mb-6 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-800'
-          }`}>
-            Dashboard
-          </h2>
-          
-          {studentData && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className={`p-6 rounded-lg shadow-lg border transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-white/10 border-white/20 hover:bg-white/15'
-                    : 'bg-white border-gray-200 hover:bg-gray-50'
-                }`}>
-                  <ThumbsUp className={`h-8 w-8 ${theme === 'dark' ? 'text-blue-500' : 'text-blue-600'} mb-2`} />
-                  <h3 className={`text-xl font-semibold mb-2 ${
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="max-w-7xl mx-auto"
+          >
+            {/* Welcome Section */}
+            <motion.div 
+              variants={itemVariants}
+              className={`p-6 rounded-xl mb-6 ${
+                theme === 'dark' 
+                  ? 'bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-white/10' 
+                  : 'bg-gradient-to-r from-blue-50 to-purple-50 border border-gray-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className={`text-3xl font-bold mb-2 ${
                     theme === 'dark' ? 'text-white' : 'text-gray-800'
-                  }`}>Attendance</h3>
-                  <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Status</p>
+                  }`}>
+                    Welcome back, {studentData?.name?.split(' ')[0] || 'Student'}! 👋
+                  </h1>
+                  <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {new Date().toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
                 </div>
-                <div className={`p-6 rounded-lg shadow-lg border transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-white/10 border-white/20 hover:bg-white/15'
-                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                <div className={`p-4 rounded-lg ${
+                  theme === 'dark' ? 'bg-white/10' : 'bg-white'
                 }`}>
-                  <BookOpen className={`h-8 w-8 ${theme === 'dark' ? 'text-yellow-500' : 'text-yellow-600'} mb-2`} />
-                  <h3 className={`text-xl font-semibold mb-2 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-800'
-                  }`}>Academic Info</h3>
-                  <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>{studentData.department}</p>
-                </div>
-                <div className={`p-6 rounded-lg shadow-lg border transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-white/10 border-white/20 hover:bg-white/15'
-                    : 'bg-white border-gray-200 hover:bg-gray-50'
-                }`}>
-                  <Share2 className={`h-8 w-8 ${theme === 'dark' ? 'text-purple-500' : 'text-purple-600'} mb-2`} />
-                  <h3 className={`text-xl font-semibold mb-2 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-800'
-                  }`}>{studentData.year} Year</h3>
-                  <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Section {studentData.section}</p>
+                  <span className={`text-xl font-semibold ${
+                    theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                  }`}>
+                    {currentTime.toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: true 
+                    })}
+                  </span>
                 </div>
               </div>
+            </motion.div>
 
-              <h3 className={`text-xl font-semibold mb-4 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-800'
-              }`}>Personal Details</h3>
-              <div className={`shadow-lg rounded-lg overflow-hidden border ${
-                theme === 'dark' 
-                  ? 'bg-white/10 border-white/20' 
-                  : 'bg-white border-gray-200'
-              }`}>
-                <div className="p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className={`block text-sm font-medium mb-1 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        Full Name
-                      </label>
-                      <div className={`w-full rounded-md px-3 py-2 ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 border border-white/10 text-white' 
-                          : 'bg-gray-100 border border-gray-200 text-gray-900'
-                      }`}>
-                        {studentData?.name || 'N/A'}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className={`block text-sm font-medium mb-1 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        USN
-                      </label>
-                      <div className={`w-full rounded-md px-3 py-2 ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 border border-white/10 text-white' 
-                          : 'bg-gray-100 border border-gray-200 text-gray-900'
-                      }`}>
-                        {studentData?.usn || 'N/A'}
-                      </div>
-                    </div>
+            {/* Academic Info Cards */}
+            <motion.div 
+              variants={itemVariants}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"
+            >
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className={`p-6 rounded-xl border ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-white/10'
+                    : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+                }`}
+              >
+                <ThumbsUp className={`h-8 w-8 ${
+                  overallAttendance.percentage >= 85
+                    ? theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                    : overallAttendance.percentage >= 75
+                    ? theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                    : overallAttendance.percentage >= 65
+                    ? theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+                    : overallAttendance.percentage >= 55
+                    ? theme === 'dark' ? 'text-orange-400' : 'text-orange-600'
+                    : theme === 'dark' ? 'text-red-400' : 'text-red-600'
+                } mb-4`} />
+                <h3 className={`text-xl font-semibold mb-2 ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-800'
+                }`}>Attendance</h3>
+                <div className="flex items-center">
+                  <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`absolute top-0 left-0 h-full rounded-full ${
+                        overallAttendance.percentage >= 85
+                          ? 'bg-green-500'
+                          : overallAttendance.percentage >= 75
+                          ? 'bg-blue-500'
+                          : overallAttendance.percentage >= 65
+                          ? 'bg-yellow-500'
+                          : overallAttendance.percentage >= 55
+                          ? 'bg-orange-500'
+                          : 'bg-red-500'
+                      }`} 
+                      style={{ width: `${overallAttendance.percentage}%` }}
+                    ></div>
+                  </div>
+                  <span className={`ml-3 font-semibold ${
+                    theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                  }`}>{overallAttendance.percentage}%</span>
+                </div>
+                <div className={`mt-2 text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  Present: {overallAttendance.presentClasses} / {overallAttendance.totalClasses} classes
+                </div>
+              </motion.div>
 
-                    <div>
-                      <label className={`block text-sm font-medium mb-1 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        Branch
-                      </label>
-                      <div className={`w-full rounded-md px-3 py-2 ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 border border-white/10 text-white' 
-                          : 'bg-gray-100 border border-gray-200 text-gray-900'
-                      }`}>
-                        {studentData?.department || 'N/A'}
-                      </div>
-                    </div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className={`p-6 rounded-xl border ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-white/10'
+                    : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'
+                }`}
+              >
+                <Calculator className={`h-8 w-8 ${
+                  theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                } mb-4`} />
+                <h3 className={`text-xl font-semibold mb-2 ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-800'
+                }`}>CGPA Calculator</h3>
+                <div className="space-y-2">
+                  <div className={`flex items-center justify-between text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    <span>Current CGPA</span>
+                    <span className={`font-semibold ${
+                      theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                    }`}>8.5</span>
+                  </div>
+                  <button 
+                    onClick={() => setIsCGPACalculatorOpen(true)}
+                    className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    }`}
+                  >
+                    Calculate CGPA
+                  </button>
+                </div>
+              </motion.div>
 
-                    <div>
-                      <label className={`block text-sm font-medium mb-1 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        Section
-                      </label>
-                      <div className={`w-full rounded-md px-3 py-2 ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 border border-white/10 text-white' 
-                          : 'bg-gray-100 border border-gray-200 text-gray-900'
-                      }`}>
-                        {studentData?.section || 'N/A'}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className={`block text-sm font-medium mb-1 ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        Year
-                      </label>
-                      <div className={`w-full rounded-md px-3 py-2 ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 border border-white/10 text-white' 
-                          : 'bg-gray-100 border border-gray-200 text-gray-900'
-                      }`}>
-                        {studentData?.year ? `${studentData.year}${getYearSuffix(studentData.year)} Year` : 'N/A'}
-                      </div>
-                    </div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className={`p-6 rounded-xl border ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-br from-green-900/20 to-green-800/20 border-white/10'
+                    : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
+                }`}
+              >
+                <FileText className={`h-8 w-8 ${
+                  theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                } mb-4`} />
+                <h3 className={`text-xl font-semibold mb-2 ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-800'
+                }`}>Syllabus & Notes</h3>
+                <div className="space-y-2">
+                  <div className={`flex items-center justify-between text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    <span>Recent Updates</span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      theme === 'dark'
+                        ? 'bg-green-500/20 text-green-300'
+                        : 'bg-green-100 text-green-700'
+                    }`}>New</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => window.open('https://drive.google.com/drive/folders/1KCNrUMH6DwkVqQdNI4lvMMonoFJdFKaw', '_blank')}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                          : 'bg-green-100 text-green-700 hover:bg-green-200'
+                      }`}
+                    >
+                      Syllabus
+                    </button>
+                    <button 
+                      onClick={() => window.open('https://drive.google.com/drive/folders/1hop2gCA4v0KHyHQ57_VD1JC1iiwYVVdz', '_blank')}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                          : 'bg-green-100 text-green-700 hover:bg-green-200'
+                      }`}
+                    >
+                      Notes
+                    </button>
                   </div>
                 </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Events & Announcements Section */}
+            <motion.div 
+              variants={itemVariants}
+              className="mt-6"
+            >
+              <h3 className={`text-xl font-semibold mb-4 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-800'
+              }`}>Events & Announcements</h3>
+              <div className={`rounded-xl border ${
+                theme === 'dark' 
+                  ? 'bg-white/5 border-white/10' 
+                  : 'bg-white border-gray-200'
+              } p-4`}>
+                <ul className="space-y-4">
+                  <li className={`p-4 rounded-lg ${
+                    theme === 'dark' ? 'bg-white/10' : 'bg-gray-50'
+                  }`}>
+                    <h4 className={`text-lg font-semibold ${
+                      theme === 'dark' ? 'text-white' : 'text-gray-800'
+                    }`}>Hackathon 2023</h4>
+                    <p className={`text-sm ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Join us for a 24-hour coding marathon on March 15th. Register by March 10th.</p>
+                  </li>
+                  <li className={`p-4 rounded-lg ${
+                    theme === 'dark' ? 'bg-white/10' : 'bg-gray-50'
+                  }`}>
+                    <h4 className={`text-lg font-semibold ${
+                      theme === 'dark' ? 'text-white' : 'text-gray-800'
+                    }`}>Guest Lecture: AI in Healthcare</h4>
+                    <p className={`text-sm ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Dr. Smith will discuss the latest advancements in AI applications in healthcare on March 20th.</p>
+                  </li>
+                  <li className={`p-4 rounded-lg ${
+                    theme === 'dark' ? 'bg-white/10' : 'bg-gray-50'
+                  }`}>
+                    <h4 className={`text-lg font-semibold ${
+                      theme === 'dark' ? 'text-white' : 'text-gray-800'
+                    }`}>Annual Sports Meet</h4>
+                    <p className={`text-sm ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Participate in various sports events from March 25th to March 27th. Register by March 18th.</p>
+                  </li>
+                </ul>
               </div>
-            </>
-          )}
+            </motion.div>
+          </motion.div>
         </main>
       </div>
       <ProfileModal 
@@ -349,6 +543,11 @@ function DashboardPage() {
         onClose={() => setIsSettingsOpen(false)}
         theme={theme}
         setTheme={setTheme}
+      />
+      <CGPACalculatorModal 
+        isOpen={isCGPACalculatorOpen}
+        onClose={() => setIsCGPACalculatorOpen(false)}
+        theme={theme}
       />
     </div>
   );

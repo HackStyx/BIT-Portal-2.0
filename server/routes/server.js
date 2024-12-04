@@ -9,7 +9,6 @@ const teacherRoutes = require('./routes/teacherRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const feeRoutes = require('./routes/feeRoutes');
 const examRoutes = require('./routes/examRoutes');
-const markRoutes = require('./routes/markRoutes');
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {
@@ -50,7 +49,6 @@ app.use('/api', verifyTurnstileRouter);
 app.use('/api', attendanceRoutes);
 app.use('/api', feeRoutes);
 app.use('/api', examRoutes);
-app.use('/api', markRoutes);
 
 // Error handling middleware
 app.use((req, res) => {
