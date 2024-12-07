@@ -1,68 +1,48 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AdminSidebar } from '../components/AdminSidebar';
-import { Bell, Search, Moon, Sun, UserCircle, Camera, LogOut } from 'lucide-react';
-import { Line, LineChart, ResponsiveContainer } from "recharts";
-import { motion, AnimatePresence } from 'framer-motion';
+import { Bell, Search, Moon, Sun } from 'lucide-react';
+import { Line, LineChart, ResponsiveContainer, XAxis, Tooltip } from "recharts";
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
-const data = [
-  { name: "Jan", value: 60 },
-  { name: "Feb", value: 65 },
-  { name: "Mar", value: 58 },
-];
-
-// Add this fallback data after the initial data constant
-const fallbackTeachers = [
-  {
-    teacherId: "TECH001",
-    name: "Harish BT",
-    email: "harish.bt@college.edu",
-    department: "Computer Science",
-    designation: "Assistant Professor",
-    subjects: ["Data Structures", "Algorithms", "Database Management"]
-  },
-  {
-    teacherId: "TECH002",
-    name: "Pooja P",
-    email: "Pooja.p@college.edu",
-    department: "Computer Science",
-    designation: "Assistant Professor",
-    subjects: ["Data Structures", "Algorithms", "Database Management"]
-  },
-  {
-    teacherId: "TECH003",
-    name: "Madhuri J",
-    email: "madhuri.j@college.edu",
-    department: "Computer Science ",
-    designation: "Assistant Professor",
-    subjects: ["Data Structures", "Algorithms", "Database Management"]
+// Function to generate graph data
+const generateGraphData = (total, change) => {
+  const months = 6; // Show last 6 months
+  const data = [];
+  const today = new Date();
+  let currentValue = total - (change * 3); // Start from a lower value
+  
+  for (let i = months - 1; i >= 0; i--) {
+    const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const monthName = date.toLocaleString('default', { month: 'short' });
+    
+    // Generate random fluctuation between -10% and +10% of the total
+    const fluctuation = Math.floor((Math.random() - 0.5) * 0.2 * total);
+    
+    if (i === 0) {
+      // Current month - use actual total
+      data.push({ name: monthName, value: total });
+    } else if (i === 1) {
+      // Last month - use total minus change
+      data.push({ name: monthName, value: total - change });
+    } else {
+      // Previous months - show gradual growth/decline with random fluctuations
+      currentValue = Math.max(0, currentValue + fluctuation);
+      data.push({ name: monthName, value: Math.round(currentValue) });
+    }
   }
-];
-
-// Add this fallback data at the top with other constants
-const fallbackStudents = [
-  {
-    usn: "1BM20CS001",
-    name: "Aditya Kumar",
-    department: "Computer Science",
-    year: "3rd Year",
-    section: "A"
-  },
-  {
-    usn: "1BM20CS002",
-    name: "Priya Sharma",
-    department: "Computer Science",
-    year: "3rd Year",
-    section: "A"
-  },
-  {
-    usn: "1BM20CS003",
-    name: "Rahul Patel",
-    department: "Computer Science",
-    year: "3rd Year",
-    section: "B"
+  
+  // Ensure the graph shows an overall trend matching the change
+  if (change > 0) {
+    // For positive change, ensure the first value is lower than the last
+    data[0].value = Math.min(data[0].value, total - (change * 2));
+  } else if (change < 0) {
+    // For negative change, ensure the first value is higher than the last
+    data[0].value = Math.max(data[0].value, total + (Math.abs(change) * 2));
   }
-];
+  
+  return data;
+};
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -90,7 +70,6 @@ function AdminDashboard() {
     ? `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api`
     : 'http://localhost:5000/api';
 
-  // Add the getGreeting function
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good Morning";
@@ -133,98 +112,71 @@ function AdminDashboard() {
         const [studentsResponse, teachersResponse] = await Promise.all([
           fetch(`${baseURL}/api/auth/students`, {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              'Authorization': token,
               'Content-Type': 'application/json'
             }
           }),
-          fetch(`${baseURL}/api/auth/teachers`, {
+          fetch(`${baseURL}/api/auth/admin/teachers`, {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              'Authorization': token,
               'Content-Type': 'application/json'
             }
           })
         ]);
 
-        let studentsData;
-        let teachersData;
-        
-        try {
-          studentsData = await studentsResponse.json();
-        } catch (error) {
-          console.error('Error parsing students data:', error);
-          studentsData = { students: fallbackStudents };
-        }
+        let studentsData = await studentsResponse.json();
+        let teachersData = await teachersResponse.json();
 
-        try {
-          teachersData = await teachersResponse.json();
-        } catch (error) {
-          console.error('Error parsing teachers data:', error);
-          teachersData = { teachers: fallbackTeachers };
-        }
+        console.log('Students Data:', studentsData);
+        console.log('Teachers Data:', teachersData);
 
-        const students = studentsData.success ? studentsData.students : fallbackStudents;
-        const teachers = teachersData.success ? teachersData.teachers : fallbackTeachers;
+        const students = studentsData.students || [];
+        const teachers = teachersData.teachers || [];
 
         // Get recent students (last 5)
         const recentStudents = students
           .sort((a, b) => new Date(b.createdAt || new Date()) - new Date(a.createdAt || new Date()))
           .slice(0, 5);
 
+        // Get recent teachers (last 5)
+        const recentTeachers = teachers
+          .sort((a, b) => new Date(b.createdAt || new Date()) - new Date(a.createdAt || new Date()))
+          .slice(0, 5);
+
         setRecentStudents(recentStudents);
-        setRecentTeachers(teachers.slice(0, 5));
+        setRecentTeachers(recentTeachers);
         
         setStats({
           totalStudents: students.length,
           totalTeachers: teachers.length,
-          totalCourses: stats.totalCourses,
+          totalCourses: 24,
           activeUsers: students.length + teachers.length,
-          newStudentsThisMonth: studentsData.newStudentsThisMonth || 0,
-          newTeachersThisMonth: teachersData.newTeachersThisMonth || 0
+          newStudentsThisMonth: students.filter(student => {
+            const createdAt = new Date(student.createdAt?.$date || student.createdAt);
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+            return createdAt >= startOfMonth;
+          }).length,
+          newTeachersThisMonth: teachers.filter(teacher => {
+            const createdAt = new Date(teacher.createdAt?.$date || teacher.createdAt);
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+            return createdAt >= startOfMonth;
+          }).length
         });
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        setRecentStudents(fallbackStudents);
-        setRecentTeachers(fallbackTeachers);
-        setStats(prev => ({
-          ...prev,
-          totalStudents: fallbackStudents.length,
-          totalTeachers: fallbackTeachers.length,
-          newStudentsThisMonth: 0,
-          newTeachersThisMonth: 0
-        }));
+        setError('Failed to fetch dashboard data');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchDashboardData();
   }, []);
-
-  const fetchRecentTeachers = async () => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      if (!token) {
-        navigate('/admin/login');
-        return;
-      }
-
-      const response = await fetch(`${baseURL}/auth/admin/getRecentTeachers`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setRecentTeachers(Array.isArray(data.teachers) ? data.teachers : []);
-      } else {
-        console.error('Failed to fetch recent teachers:', data.message);
-      }
-    } catch (error) {
-      console.error('Error fetching recent teachers:', error);
-    }
-  };
 
   return (
     <div className={`min-h-screen ${
@@ -316,12 +268,6 @@ function AdminDashboard() {
                 }`}>
                   <Bell className="h-5 w-5" />
                 </button>
-
-                {/* Profile Menu */}
-                <div className="relative" ref={profileRef}>
-                  {/* Profile button and menu implementation */}
-                  {/* ... (Same as TeacherDashboard) ... */}
-                </div>
               </div>
             </div>
           </motion.div>
@@ -345,29 +291,29 @@ function AdminDashboard() {
               <StatsCard
                 title="Total Students"
                 value={stats.totalStudents.toLocaleString()}
-                change={`+${stats.newStudentsThisMonth}`}
-                chart={data}
+                change={stats.newStudentsThisMonth}
+                chart={generateGraphData(stats.totalStudents, stats.newStudentsThisMonth)}
                 theme={theme}
               />
               <StatsCard
                 title="Total Teachers"
                 value={stats.totalTeachers.toLocaleString()}
-                change={`+${stats.newTeachersThisMonth}`}
-                chart={data}
+                change={stats.newTeachersThisMonth}
+                chart={generateGraphData(stats.totalTeachers, stats.newTeachersThisMonth)}
                 theme={theme}
               />
               <StatsCard
                 title="Total Courses"
                 value={stats.totalCourses.toString()}
-                change="+3"
-                chart={data}
+                change={0}
+                chart={generateGraphData(stats.totalCourses, 0)}
                 theme={theme}
               />
               <StatsCard
                 title="Active Users"
                 value={stats.activeUsers.toLocaleString()}
-                change="+125"
-                chart={data}
+                change={stats.newStudentsThisMonth + stats.newTeachersThisMonth}
+                chart={generateGraphData(stats.activeUsers, stats.newStudentsThisMonth + stats.newTeachersThisMonth)}
                 theme={theme}
               />
             </motion.div>
@@ -447,6 +393,32 @@ function AdminDashboard() {
 
 // Stats Card Component
 function StatsCard({ title, value, change, chart, theme }) {
+  const [graphData, setGraphData] = useState(chart);
+
+  // Refresh graph data every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGraphData(generateGraphData(parseInt(value), change));
+    }, 300000); // 5 minutes in milliseconds
+
+    return () => clearInterval(interval);
+  }, [value, change]);
+
+  // Update graph data when value or change updates
+  useEffect(() => {
+    setGraphData(generateGraphData(parseInt(value), change));
+  }, [value, change]);
+
+  const getChangeDisplay = () => {
+    if (change === 0) return "No change from last month";
+    return `${change > 0 ? '+' : ''}${change} from last month`;
+  };
+
+  const getChangeColor = () => {
+    if (change === 0) return theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
+    return change > 0 ? 'text-green-500' : 'text-red-500';
+  };
+
   return (
     <div className={`p-6 rounded-lg shadow-lg border transition-colors ${
       theme === 'dark'
@@ -456,16 +428,48 @@ function StatsCard({ title, value, change, chart, theme }) {
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <div className="mt-4">
         <div className="text-3xl font-bold">{value}</div>
-        <p className="text-sm text-green-500">{change} from last month</p>
+        <div className="flex items-center gap-2 mt-1">
+          {change !== 0 && (
+            <span className={`flex items-center ${getChangeColor()}`}>
+              {change > 0 ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              )}
+            </span>
+          )}
+          <p className={`text-sm ${getChangeColor()}`}>
+            {getChangeDisplay()}
+          </p>
+        </div>
         <div className="h-[80px] mt-4">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chart}>
+            <LineChart data={graphData}>
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke={theme === 'dark' ? '#8884d8' : '#4f46e5'}
+                stroke={change > 0 ? '#10B981' : change < 0 ? '#EF4444' : '#6B7280'}
                 strokeWidth={2}
                 dot={false}
+              />
+              <XAxis 
+                dataKey="name" 
+                tick={{ fontSize: 10, fill: theme === 'dark' ? '#9CA3AF' : '#4B5563' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                }}
+                labelStyle={{ color: theme === 'dark' ? '#FFFFFF' : '#000000' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -476,3 +480,4 @@ function StatsCard({ title, value, change, chart, theme }) {
 }
 
 export default AdminDashboard;
+

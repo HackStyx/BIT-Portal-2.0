@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, UserCheck, UserX } from 'lucide-react';
+import { Calendar, UserCheck, UserX, X } from 'lucide-react';
 import { useAttendance } from '../../contexts/AttendanceContext';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 const calculateClassesNeeded = (presentClasses, totalClasses) => {
   const currentPercentage = (presentClasses / totalClasses) * 100;
@@ -23,6 +24,7 @@ function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const { setOverallAttendance } = useAttendance();
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [showOverallStats, setShowOverallStats] = useState(false);
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -88,6 +90,340 @@ function AttendancePage() {
     setSelectedSubject(selectedSubject === subject ? null : subject);
   };
 
+  const OverallStatsModal = () => {
+    const overall = subjectWiseAttendance['Overall'];
+    const percentage = parseFloat(overall?.percentage || 0);
+    const presentClasses = parseInt(overall?.presentClasses || 0);
+    const totalClasses = parseInt(overall?.totalClasses || 0);
+    const absentClasses = totalClasses - presentClasses;
+    
+    // Prepare data for the pie chart
+    const subjectData = Object.entries(subjectWiseAttendance)
+      .filter(([subject]) => subject !== 'Overall')
+      .map(([subject, data]) => ({
+        name: subject,
+        value: parseInt(data.presentClasses),
+        totalClasses: parseInt(data.totalClasses),
+        absentDays: parseInt(data.totalClasses) - parseInt(data.presentClasses),
+        percentage: parseFloat(data.percentage)
+      }));
+
+    // Colors for the pie chart
+    const COLORS = [
+      '#4ECDC4', '#FF6B6B', '#45B7D1', '#96CEB4', 
+      '#FFEEAD', '#D4A5A5', '#9B5DE5', '#00BBF9'
+    ];
+
+    // Custom tooltip component
+    const CustomTooltip = ({ active, payload }) => {
+      if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+          <div className={`p-4 rounded-lg shadow-lg ${
+            theme === 'dark' 
+              ? 'bg-gray-800 border border-gray-700' 
+              : 'bg-white border border-gray-200'
+          }`}>
+            <h4 className={`font-bold mb-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-800'
+            }`}>{data.name}</h4>
+            <div className={`space-y-1 text-sm ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}>
+              <p>Total Classes: {data.totalClasses}</p>
+              <p>Present Days: {data.value}</p>
+              <p>Absent Days: {data.absentDays}</p>
+              <p className={`font-semibold ${
+                data.percentage >= 85 ? 'text-green-500' :
+                data.percentage >= 75 ? 'text-blue-500' :
+                'text-red-500'
+              }`}>
+                Attendance: {data.percentage}%
+              </p>
+            </div>
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className={`relative w-full max-w-4xl p-8 rounded-2xl ${
+          theme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
+        }`}>
+          <button
+            onClick={() => setShowOverallStats(false)}
+            className={`absolute right-4 top-4 p-1 rounded-full ${
+              theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-gray-100'
+            }`}
+          >
+            <X className={`h-5 w-5 ${theme === 'dark' ? 'text-white' : 'text-gray-600'}`} />
+          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column - Pie Chart */}
+            <div>
+              <h2 className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                Attendance Distribution
+              </h2>
+              
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={subjectData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={140}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {subjectData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index % COLORS.length]}
+                          strokeWidth={2}
+                          stroke={theme === 'dark' ? '#1a1a1a' : '#ffffff'}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Legend */}
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {subjectData.map((subject, index) => (
+                  <div 
+                    key={subject.name}
+                    className="flex items-center text-sm"
+                  >
+                    <span 
+                      className="w-3 h-3 rounded-full mr-2"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className={`truncate ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    }`}>
+                      {subject.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column - Stats */}
+            <div className="space-y-6">
+              <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+                <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                  Overall Statistics
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Overall Attendance
+                    </p>
+                    <p className={`text-3xl font-bold ${
+                      percentage >= 85 ? 'text-green-500' :
+                      percentage >= 75 ? 'text-blue-500' :
+                      'text-red-500'
+                    }`}>
+                      {percentage}%
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Total Classes
+                      </p>
+                      <p className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                        {totalClasses}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Classes Attended
+                      </p>
+                      <p className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                        {presentClasses}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Target Analysis */}
+              <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+                <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                  Target Analysis
+                </h3>
+                
+                {percentage >= 85 ? (
+                  <p className="text-green-500 font-medium">
+                    ✨ Congratulations! You've maintained excellent attendance above 85%
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                      To reach 85% attendance:
+                    </p>
+                    <p className={`font-medium ${
+                      theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+                    }`}>
+                      Need {calculateClassesNeeded(presentClasses, totalClasses)} consecutive presents
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const DetailedRecordsModal = ({ subject, data, onClose }) => {
+    // Calculate attendance statistics
+    const records = data?.records || [];
+    const presentCount = records.filter(r => r.status === 'present').length;
+    const absentCount = records.filter(r => r.status === 'absent').length;
+    const totalCount = records.length;
+
+    // Prepare data for the pie chart
+    const chartData = [
+      { name: 'Present', value: presentCount },
+      { name: 'Absent', value: absentCount }
+    ];
+
+    const COLORS = ['#4ECDC4', '#FF6B6B'];
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className={`relative w-full max-w-4xl p-8 rounded-2xl ${
+          theme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
+        }`}>
+          <button
+            onClick={onClose}
+            className={`absolute right-4 top-4 p-1 rounded-full ${
+              theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-gray-100'
+            }`}
+          >
+            <X className={`h-5 w-5 ${theme === 'dark' ? 'text-white' : 'text-gray-600'}`} />
+          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left Column - Pie Chart */}
+            <div>
+              <h2 className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                {subject} - Attendance Distribution
+              </h2>
+              
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={140}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index]}
+                          strokeWidth={2}
+                          stroke={theme === 'dark' ? '#1a1a1a' : '#ffffff'}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Legend */}
+              <div className="mt-4 flex justify-center gap-6">
+                {chartData.map((item, index) => (
+                  <div key={item.name} className="flex items-center">
+                    <span 
+                      className="w-3 h-3 rounded-full mr-2"
+                      style={{ backgroundColor: COLORS[index] }}
+                    />
+                    <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                      {item.name} ({item.value})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column - Records Table */}
+            <div>
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                Attendance Records
+              </h3>
+              
+              <div className={`rounded-xl border overflow-hidden ${
+                theme === 'dark' ? 'bg-white/5 border-white/20' : 'bg-white border-gray-200'
+              }`}>
+                <div className="max-h-[500px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className={`sticky top-0 ${
+                      theme === 'dark' 
+                        ? 'bg-gray-800' 
+                        : 'bg-gray-50'
+                    }`}>
+                      <tr>
+                        <th className={`px-4 py-3 text-left text-sm font-semibold ${
+                          theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                        }`}>Date</th>
+                        <th className={`px-4 py-3 text-center text-sm font-semibold ${
+                          theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                        }`}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${
+                      theme === 'dark' ? 'divide-white/5' : 'divide-gray-100'
+                    }`}>
+                      {records.map((record, index) => (
+                        <tr key={index} className={
+                          theme === 'dark'
+                            ? 'hover:bg-white/5'
+                            : 'hover:bg-gray-50'
+                        }>
+                          <td className={`px-4 py-3 ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                          }`}>{new Date(record.date).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              record.status === 'present'
+                                ? 'bg-green-100/10 text-green-500'
+                                : 'bg-red-100/10 text-red-500'
+                            }`}>
+                              {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-r from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
@@ -123,11 +459,14 @@ function AttendancePage() {
           theme === 'dark' ? 'bg-[#111111]' : 'bg-gray-50'
         }`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className={`p-6 rounded-lg shadow-lg border ${
-              theme === 'dark'
-                ? 'bg-white/10 border-white/20'
-                : 'bg-white border-gray-200'
-            }`}>
+            <div
+              onClick={() => setShowOverallStats(true)}
+              className={`p-6 rounded-lg shadow-lg border cursor-pointer transition-all ${
+                theme === 'dark'
+                  ? 'bg-white/10 border-white/20 hover:bg-white/[0.15]'
+                  : 'bg-white border-gray-200 hover:bg-gray-50'
+              }`}
+            >
               <Calendar className={`h-8 w-8 ${theme === 'dark' ? 'text-blue-500' : 'text-blue-600'} mb-2`} />
               <h3 className={`text-xl font-semibold mb-2 ${
                 theme === 'dark' ? 'text-white' : 'text-gray-800'
@@ -250,75 +589,15 @@ function AttendancePage() {
           </div>
 
           {selectedSubject && (
-            <div className="mt-12">
-              <h2 className={`text-xl font-semibold mb-6 flex items-center justify-between max-w-md mx-auto ${
-                theme === 'dark' ? 'text-white' : 'text-gray-800'
-              }`}>
-                <span className="flex-1 text-center pr-8">Detailed Records - {selectedSubject}</span>
-                <button 
-                  onClick={() => setSelectedSubject(null)}
-                  className={`text-sm px-3 py-1 rounded-lg ${
-                    theme === 'dark' 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                  }`}
-                >
-                  Close
-                </button>
-              </h2>
-              
-              <div className="flex justify-center">
-                <div className={`rounded-xl border overflow-hidden w-full max-w-md ${
-                  theme === 'dark' ? 'bg-white/10 border-white/20' : 'bg-white border-gray-200'
-                }`}>
-                  <table className="w-full">
-                    <thead className={`${
-                      theme === 'dark' 
-                        ? 'bg-gradient-to-r from-blue-900/50 via-purple-900/50 to-blue-900/50' 
-                        : 'bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50'
-                    }`}>
-                      <tr>
-                        <th className={`px-4 py-3 text-left text-sm font-semibold ${
-                          theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
-                        }`}>Date</th>
-                        <th className={`px-4 py-3 text-center text-sm font-semibold ${
-                          theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
-                        }`}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className={`divide-y ${
-                      theme === 'dark' ? 'divide-white/5' : 'divide-gray-100'
-                    }`}>
-                      {subjectWiseAttendance[selectedSubject]?.records?.map((record, index) => (
-                        <tr key={index} className={`${
-                          theme === 'dark'
-                            ? 'hover:bg-white/5 even:bg-white/[0.02]'
-                            : 'hover:bg-gray-50 even:bg-gray-50/50'
-                        }`}>
-                          <td className={`px-4 py-3 ${
-                            theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
-                          }`}>{new Date(record.date).toLocaleDateString()}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              record.status === 'present'
-                                ? 'bg-green-100/10 text-green-500'
-                                : record.status === 'absent'
-                                ? 'bg-red-100/10 text-red-500'
-                                : 'bg-yellow-100/10 text-yellow-500'
-                            }`}>
-                              {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            <DetailedRecordsModal
+              subject={selectedSubject}
+              data={subjectWiseAttendance[selectedSubject]}
+              onClose={() => setSelectedSubject(null)}
+            />
           )}
         </main>
       </div>
+      {showOverallStats && <OverallStatsModal />}
     </div>
   );
 }

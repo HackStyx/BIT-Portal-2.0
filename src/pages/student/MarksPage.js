@@ -1,8 +1,267 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, TrendingUp, Award, ChevronDown } from 'lucide-react';
+import { BookOpen, TrendingUp, Award, ChevronDown, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+
+const SemesterDetailsModal = ({ semester, data, summary, onClose, theme }) => {
+  // Prepare data for visualizations
+  const subjectData = Object.entries(data).map(([subject, marks]) => {
+    const totalMarks = marks.reduce((sum, mark) => sum + mark.marks, 0);
+    const maxMarks = marks.reduce((sum, mark) => sum + mark.totalMarks, 0);
+    const percentage = (totalMarks / maxMarks) * 100;
+    
+    return {
+      subject,
+      percentage: parseFloat(percentage.toFixed(2)),
+      totalMarks,
+      maxMarks,
+      details: marks
+    };
+  });
+
+  // Colors for charts
+  const COLORS = ['#4ECDC4', '#FF6B6B', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#9B5DE5', '#00BBF9'];
+
+  const getGradeBadgeColor = (percentage) => {
+    if (percentage >= 90) return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
+    if (percentage >= 80) return 'bg-blue-50 text-blue-700 ring-blue-600/20';
+    if (percentage >= 70) return 'bg-indigo-50 text-indigo-700 ring-indigo-600/20';
+    if (percentage >= 60) return 'bg-yellow-50 text-yellow-700 ring-yellow-600/20';
+    return 'bg-red-50 text-red-700 ring-red-600/20';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className={`relative w-full max-w-6xl p-8 rounded-2xl max-h-[90vh] overflow-y-auto ${
+        theme === 'dark' ? 'bg-[#1a1a1a]' : 'bg-white'
+      }`}>
+        <button
+          onClick={onClose}
+          className={`absolute right-4 top-4 p-1 rounded-full ${
+            theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-gray-100'
+          }`}
+        >
+          <X className={`h-5 w-5 ${theme === 'dark' ? 'text-white' : 'text-gray-600'}`} />
+        </button>
+
+        <h2 className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+          Semester {semester} Performance Analysis
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Left Column - Summary and Pie Chart */}
+          <div className="space-y-6">
+            {/* Summary Card */}
+            <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                Semester Overview
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Overall Percentage
+                  </p>
+                  <p className={`text-3xl font-bold ${
+                    summary[semester].percentage >= 85 ? 'text-green-500' :
+                    summary[semester].percentage >= 75 ? 'text-blue-500' :
+                    'text-red-500'
+                  }`}>
+                    {summary[semester].percentage}%
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Total Marks
+                    </p>
+                    <p className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                      {summary[semester].obtainedMarks}/{summary[semester].totalMarks}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Subjects
+                    </p>
+                    <p className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                      {summary[semester].subjects}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie Chart */}
+            <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                Subject Distribution
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={subjectData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="percentage"
+                      nameKey="subject"
+                    >
+                      {subjectData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index % COLORS.length]}
+                          strokeWidth={2}
+                          stroke={theme === 'dark' ? '#1a1a1a' : '#ffffff'}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className={`p-4 rounded-lg shadow-lg ${
+                              theme === 'dark' 
+                                ? 'bg-gray-800 border border-gray-700' 
+                                : 'bg-white border border-gray-200'
+                            }`}>
+                              <h4 className={`font-bold mb-2 ${
+                                theme === 'dark' ? 'text-white' : 'text-gray-800'
+                              }`}>{data.subject}</h4>
+                              <div className={`space-y-1 text-sm ${
+                                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                <p>Total Marks: {data.totalMarks}/{data.maxMarks}</p>
+                                <p className={`font-semibold ${
+                                  data.percentage >= 85 ? 'text-green-500' :
+                                  data.percentage >= 75 ? 'text-blue-500' :
+                                  'text-red-500'
+                                }`}>
+                                  Percentage: {data.percentage}%
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {subjectData.map((subject, index) => (
+                  <div key={subject.subject} className="flex items-center text-sm">
+                    <span 
+                      className="w-3 h-3 rounded-full mr-2"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className={`truncate ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                      {subject.subject}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Bar Chart and Details */}
+          <div className="space-y-6">
+            {/* Bar Chart */}
+            <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'}`}>
+              <h3 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                Subject-wise Performance
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={subjectData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 60
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                    <XAxis 
+                      dataKey="subject" 
+                      angle={-45} 
+                      textAnchor="end" 
+                      height={70}
+                      interval={0}
+                      tick={{ 
+                        fill: theme === 'dark' ? '#fff' : '#000', 
+                        fontSize: 12,
+                        dy: 5
+                      }}
+                    />
+                    <YAxis 
+                      tick={{ fill: theme === 'dark' ? '#fff' : '#000' }}
+                      domain={[0, 100]}
+                    />
+                    <Tooltip />
+                    <Bar dataKey="percentage" fill="#4ECDC4" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Detailed Marks Table */}
+            <div className={`rounded-xl border overflow-hidden ${
+              theme === 'dark' ? 'bg-white/5 border-white/20' : 'bg-white border-gray-200'
+            }`}>
+              <div className="max-h-[300px] overflow-y-auto">
+                <table className="w-full">
+                  <thead className={`sticky top-0 ${
+                    theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+                  }`}>
+                    <tr>
+                      <th className={`px-4 py-3 text-left text-sm font-semibold ${
+                        theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                      }`}>Subject</th>
+                      <th className={`px-4 py-3 text-center text-sm font-semibold ${
+                        theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                      }`}>Marks</th>
+                      <th className={`px-4 py-3 text-center text-sm font-semibold ${
+                        theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                      }`}>Percentage</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${theme === 'dark' ? 'divide-white/5' : 'divide-gray-100'}`}>
+                    {subjectData.map((subject) => (
+                      <tr key={subject.subject} className={
+                        theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'
+                      }>
+                        <td className={`px-4 py-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-900'}`}>
+                          {subject.subject}
+                        </td>
+                        <td className={`px-4 py-3 text-center ${theme === 'dark' ? 'text-gray-300' : 'text-gray-900'}`}>
+                          {subject.totalMarks}/{subject.maxMarks}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            getGradeBadgeColor(subject.percentage)
+                          }`}>
+                            {subject.percentage}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function MarksPage() {
   const [studentData, setStudentData] = useState(null);
@@ -16,6 +275,7 @@ function MarksPage() {
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [availableSubjects, setAvailableSubjects] = useState([]);
+  const [selectedSemesterDetails, setSelectedSemesterDetails] = useState(null);
 
   useEffect(() => {
     const fetchMarks = async () => {
@@ -84,6 +344,10 @@ function MarksPage() {
         [selectedSubject]: marksData[selectedSemester]?.[selectedSubject]
       }
     };
+  };
+
+  const handleSemesterClick = (semester) => {
+    setSelectedSemesterDetails(semester);
   };
 
   if (loading) {
@@ -198,9 +462,10 @@ function MarksPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`rounded-xl border shadow-sm ${
+                  onClick={() => handleSemesterClick(semester)}
+                  className={`rounded-xl border shadow-sm cursor-pointer ${
                     theme === 'dark'
-                      ? 'bg-white/10 border-white/20'
+                      ? 'bg-white/10 border-white/20 hover:bg-white/[0.15]'
                       : 'bg-white border-gray-200 hover:border-gray-300'
                   } transition-all duration-200`}
                 >
@@ -329,6 +594,17 @@ function MarksPage() {
           ))}
         </main>
       </div>
+
+      {/* Add the modal */}
+      {selectedSemesterDetails && (
+        <SemesterDetailsModal
+          semester={selectedSemesterDetails}
+          data={marksData[selectedSemesterDetails]}
+          summary={summary}
+          onClose={() => setSelectedSemesterDetails(null)}
+          theme={theme}
+        />
+      )}
     </div>
   );
 }

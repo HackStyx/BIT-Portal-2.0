@@ -7,10 +7,29 @@ const auth = require('../middleware/auth');
 // Get all students
 router.get('/auth/admin/students', auth, async (req, res) => {
   try {
-    const students = await User.find({}).select('-password');
+    const students = await User.find({})
+      .select('-password')
+      .sort({ createdAt: -1 }); // Sort by creation date
+
+    // Get new students count for current month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const newStudentsThisMonth = await User.countDocuments({
+      createdAt: { $gte: startOfMonth }
+    });
+
+    // Format the date in the response
+    const formattedStudents = students.map(student => ({
+      ...student.toObject(),
+      createdAt: student.createdAt.toISOString()
+    }));
+
     res.json({
       success: true,
-      students
+      students: formattedStudents,
+      newStudentsThisMonth
     });
   } catch (error) {
     console.error('Error fetching students:', error);

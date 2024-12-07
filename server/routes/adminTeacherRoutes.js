@@ -9,11 +9,27 @@ router.get('/auth/admin/teachers', auth, async (req, res) => {
   try {
     const teachers = await Teacher.find({})
       .select('-password')
-      .sort({ name: 1 });
+      .sort({ createdAt: -1 });
+
+    // Get new teachers count for current month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const newTeachersThisMonth = await Teacher.countDocuments({
+      createdAt: { $gte: startOfMonth }
+    });
+
+    // Format the date in the response
+    const formattedTeachers = teachers.map(teacher => ({
+      ...teacher.toObject(),
+      createdAt: teacher.createdAt.toISOString()
+    }));
 
     res.json({
       success: true,
-      teachers
+      teachers: formattedTeachers,
+      newTeachersThisMonth
     });
   } catch (error) {
     console.error('Error fetching teachers:', error);
@@ -23,6 +39,17 @@ router.get('/auth/admin/teachers', auth, async (req, res) => {
     });
   }
 });
+
+// Helper function to get new teachers count
+async function getNewTeachersCount() {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  return await Teacher.countDocuments({
+    createdAt: { $gte: startOfMonth }
+  });
+}
 
 // Add new teacher (Admin)
 router.post('/auth/admin/teachers/register', auth, async (req, res) => {
