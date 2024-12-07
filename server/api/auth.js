@@ -147,29 +147,32 @@ router.put('/admin/update/:usn', async (req, res) => {
   }
 });
 
-// Add this route to get individual student data
+// Get student details
 router.get('/student/:usn', async (req, res) => {
   try {
-    const { usn } = req.params;
-    const student = await User.findOne({ usn }, { password: 0 });
-    
+    const student = await User.findOne({ usn: req.params.usn });
     if (!student) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Student not found' 
-      });
+      return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
-    res.json({ 
-      success: true, 
-      student 
+    // Send all student data
+    res.json({
+      success: true,
+      student: {
+        name: student.name,
+        usn: student.usn,
+        email: student.email,
+        department: student.department,
+        section: student.section,
+        year: student.year,
+        semester: student.year * 2, // Calculate semester from year (1st year = sem 1,2; 2nd year = sem 3,4, etc.)
+        phone: student.phone,
+        // Add any other fields you have in your User model
+      }
     });
   } catch (error) {
-    console.error('Error fetching student data:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
-    });
+    console.error('Error fetching student:', error);
+    res.status(500).json({ success: false, message: 'Error fetching student data' });
   }
 });
 
@@ -282,6 +285,46 @@ router.get('/auth/admin/getRecentTeachers', authMiddleware, async (req, res) => 
     res.json({ success: true, teachers });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Admin login route
+router.post('/admin/login', async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    // Check if password matches environment variable
+    if (password === process.env.REACT_APP_ADMIN_PASSWORD) {
+      // Generate JWT token with admin role
+      const token = jwt.sign(
+        { 
+          role: 'admin',
+          timestamp: Date.now()
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      console.log('Admin login successful, token generated');
+
+      res.json({
+        success: true,
+        message: 'Admin logged in successfully',
+        token,
+        adminName: 'Admin'
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid admin password'
+      });
+    }
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Login failed'
+    });
   }
 });
 

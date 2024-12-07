@@ -10,6 +10,10 @@ function AdminLoginPage() {
   const navigate = useNavigate();
   const { login, isAdminAuthenticated } = useAdminAuth();
 
+  const baseURL = process.env.REACT_APP_SERVER_PORT 
+    ? `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api`
+    : 'http://localhost:5000/api';
+
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     if (token) {
@@ -19,12 +23,35 @@ function AdminLoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (adminPassword === process.env.REACT_APP_ADMIN_PASSWORD) {
-      login();
-      localStorage.setItem('adminToken', 'demo-token');
-      navigate('/admin/dashboard');
-    } else {
-      setError('Invalid admin password');
+    try {
+      const response = await fetch(`${baseURL}/auth/admin/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password: adminPassword
+        })
+      });
+
+      const data = await response.json();
+      console.log('Login response:', data); // Debug log
+
+      if (data.success) {
+        // Store token with Bearer prefix
+        const token = `Bearer ${data.token}`;
+        localStorage.setItem('adminToken', token);
+        localStorage.setItem('adminName', data.adminName || 'Admin');
+        
+        console.log('Stored token:', token); // Debug log
+        login();
+        navigate('/admin/dashboard');
+      } else {
+        setError(data.message || 'Invalid admin password');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Login failed. Please try again.');
     }
   };
 

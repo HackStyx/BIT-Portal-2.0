@@ -369,21 +369,19 @@ function StudentsPage() {
                     }`}
                     required
                   />
-                  {!isEditing && (
-                    <input
-                      type="password"
-                      name="password"
-                      value={newStudent.password}
-                      onChange={handleInputChange}
-                      placeholder="Password"
-                      className={`rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                        theme === 'dark' 
-                          ? 'bg-white/10 text-white' 
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                      required
-                    />
-                  )}
+                  <input
+                    type="password"
+                    name="password"
+                    value={newStudent.password}
+                    onChange={handleInputChange}
+                    placeholder={isEditing ? "Leave blank to keep current password" : "Password"}
+                    className={`rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                      theme === 'dark' 
+                        ? 'bg-white/10 text-white' 
+                        : 'bg-gray-100 text-gray-900'
+                    }`}
+                    required={!isEditing}
+                  />
                   <div className="col-span-2">
                     <button
                       type="submit"

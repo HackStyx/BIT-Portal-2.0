@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Book, Award, Users, TrendingUp } from 'lucide-react';
 import TeacherLayout from '../../components/layouts/TeacherLayout';
@@ -6,35 +6,122 @@ import TeacherLayout from '../../components/layouts/TeacherLayout';
 function MarksEntry() {
   const [theme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState('First Year');
-  const [selectedSubject, setSelectedSubject] = useState('Mathematics');
-  const [selectedExam, setSelectedExam] = useState('Mid Term');
-
-  const mockStudents = [
-    { id: 1, name: 'Nishchay J', rollNo: '001', marks: '', maxMarks: 100 },
-    { id: 2, name: 'Harshit', rollNo: '002', marks: '', maxMarks: 100 },
-    { id: 3, name: 'Sudhanshu Kumar', rollNo: '003', marks: '', maxMarks: 100 }
-  ];
-
-  const years = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
-  const subjects = ['Data Structures', 'Algorithms', 'Operating Systems', 'Database Systems', 'Computer Networks'];
-  const examTypes = ['Mid Term', 'Final Term', 'Unit Test', 'Project'];
-
-  const [students, setStudents] = useState(mockStudents);
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedSection, setSelectedSection] = useState('all');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedExam, setSelectedExam] = useState('Internal Assessment 1');
+  const [students, setStudents] = useState([]);
   const [maxMarks, setMaxMarks] = useState(100);
+  const [loading, setLoading] = useState(false);
+  const [availableSections, setAvailableSections] = useState([]);
+  const [availableDepartments, setAvailableDepartments] = useState([]);
+  const [availableYears, setAvailableYears] = useState([]);
 
-  const handleMarksChange = (studentId, marks) => {
-    if (marks === '' || (Number(marks) >= 0 && Number(marks) <= maxMarks)) {
-      setStudents(students.map(student =>
-        student.id === studentId ? { ...student, marks } : student
-      ));
+  const subjects = ['Select Subject', 'DSA', 'Java', 'DBMS', 'OS', 'CN'];
+  const examTypes = ['Internal Assessment 1', 'Internal Assessment 2', 'Internal Assessment 3', 'Semester'];
+
+  useEffect(() => {
+    fetchStudents();
+  }, [selectedYear, selectedDepartment, selectedSection]);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const query = new URLSearchParams({
+        year: selectedYear,
+        department: selectedDepartment,
+        section: selectedSection
+      }).toString();
+
+      const response = await fetch(
+        `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/teacher/students-for-marks?${query}`
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        setStudents(data.students);
+        setAvailableSections(['all', ...data.sections]);
+        setAvailableDepartments(['all', ...data.departments]);
+        setAvailableYears(['all', ...data.years]);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMaxMarksChange = (newMaxMarks) => {
-    if (newMaxMarks === '' || (Number(newMaxMarks) > 0)) {
+  const handleMarksChange = (studentId, marks) => {
+    if (marks === '' || (Number(marks) >= 0 && Number(marks) <= maxMarks)) {
+      setStudents(prevStudents =>
+        prevStudents.map(student =>
+          student.id === studentId ? { ...student, marks } : student
+        )
+      );
+    }
+  };
+
+  const handleMaxMarksChange = (value) => {
+    const newMaxMarks = Number(value);
+    if (newMaxMarks >= 1) {
       setMaxMarks(newMaxMarks);
-      setStudents(students.map(student => ({ ...student, maxMarks: newMaxMarks })));
+      setStudents(prevStudents =>
+        prevStudents.map(student => ({
+          ...student,
+          marks: student.marks && Number(student.marks) > newMaxMarks ? newMaxMarks.toString() : student.marks
+        }))
+      );
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedSubject || selectedSubject === 'Select Subject') {
+      alert('Please select a subject before submitting marks.');
+      return;
+    }
+
+    try {
+      const marksData = students
+        .filter(student => student.marks !== '')
+        .map(student => ({
+          studentId: student.usn,
+          subject: selectedSubject,
+          examType: selectedExam,
+          marks: Number(student.marks),
+          totalMarks: Number(maxMarks),
+          semester: student.year,
+          academicYear: new Date().getFullYear().toString()
+        }));
+
+      if (marksData.length === 0) {
+        alert('Please enter marks for at least one student');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/teacher/marks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ marksData }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Marks saved successfully');
+        setStudents(prevStudents =>
+          prevStudents.map(student => ({
+            ...student,
+            marks: ''
+          }))
+        );
+      } else {
+        alert(data.message || 'Failed to save marks');
+      }
+    } catch (error) {
+      console.error('Error saving marks:', error);
+      alert('Error saving marks. Please try again.');
     }
   };
 
@@ -74,7 +161,7 @@ function MarksEntry() {
             }`}>Total Subjects</h3>
             <p className={`text-3xl font-bold ${
               theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>5</p>
+            }`}>{subjects.length - 1}</p>
           </motion.div>
 
           <motion.div
@@ -88,10 +175,10 @@ function MarksEntry() {
             <Award className={`h-8 w-8 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mb-3`} />
             <h3 className={`text-xl font-semibold mb-2 ${
               theme === 'dark' ? 'text-white' : 'text-gray-800'
-            }`}>Exams</h3>
+            }`}>Exam Types</h3>
             <p className={`text-3xl font-bold ${
               theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>4</p>
+            }`}>{examTypes.length}</p>
           </motion.div>
 
           <motion.div
@@ -108,7 +195,7 @@ function MarksEntry() {
             }`}>Total Students</h3>
             <p className={`text-3xl font-bold ${
               theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>150</p>
+            }`}>{students.length}</p>
           </motion.div>
 
           <motion.div
@@ -122,10 +209,10 @@ function MarksEntry() {
             <TrendingUp className={`h-8 w-8 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'} mb-3`} />
             <h3 className={`text-xl font-semibold mb-2 ${
               theme === 'dark' ? 'text-white' : 'text-gray-800'
-            }`}>Average Score</h3>
+            }`}>Max Marks</h3>
             <p className={`text-3xl font-bold ${
               theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>85%</p>
+            }`}>{maxMarks}</p>
           </motion.div>
         </div>
 
@@ -149,32 +236,62 @@ function MarksEntry() {
                   theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${theme === 'dark' ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '1.5em 1.5em',
-                  paddingRight: '2.5rem'
-                }}
+                }`}
               >
-                {years.map((year) => (
-                  <option 
-                    key={year} 
-                    value={year}
-                    className={`${
-                      theme === 'dark' 
-                        ? 'bg-gray-800 text-white' 
-                        : 'bg-white text-gray-900'
-                    } py-2`}
-                  >
-                    {year}
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year === 'all' ? 'All Years' : `Year ${year}`}
                   </option>
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                Select Department
+              </label>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className={`w-full p-2 rounded-lg border ${
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {availableDepartments.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept === 'all' ? 'All Departments' : dept}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                Select Section
+              </label>
+              <select
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+                className={`w-full p-2 rounded-lg border ${
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                {availableSections.map((section) => (
+                  <option key={section} value={section}>
+                    {section === 'all' ? 'All Sections' : `Section ${section}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label className={`block text-sm font-medium mb-2 ${
                 theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
@@ -188,37 +305,19 @@ function MarksEntry() {
                   theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${theme === 'dark' ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '1.5em 1.5em',
-                  paddingRight: '2.5rem'
-                }}
+                }`}
               >
                 {subjects.map((subject) => (
-                  <option 
-                    key={subject} 
-                    value={subject}
-                    className={`${
-                      theme === 'dark' 
-                        ? 'bg-gray-800 text-white' 
-                        : 'bg-white text-gray-900'
-                    } py-2`}
-                  >
-                    {subject}
-                  </option>
+                  <option key={subject} value={subject}>{subject}</option>
                 ))}
               </select>
             </div>
+
             <div>
               <label className={`block text-sm font-medium mb-2 ${
                 theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
               }`}>
-                Select Exam
+                Select Exam Type
               </label>
               <select
                 value={selectedExam}
@@ -227,31 +326,31 @@ function MarksEntry() {
                   theme === 'dark'
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${theme === 'dark' ? 'white' : 'black'}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '1.5em 1.5em',
-                  paddingRight: '2.5rem'
-                }}
+                }`}
               >
-                {examTypes.map((exam) => (
-                  <option 
-                    key={exam} 
-                    value={exam}
-                    className={`${
-                      theme === 'dark' 
-                        ? 'bg-gray-800 text-white' 
-                        : 'bg-white text-gray-900'
-                    } py-2`}
-                  >
-                    {exam}
-                  </option>
+                {examTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                Max Marks
+              </label>
+              <input
+                type="number"
+                value={maxMarks}
+                onChange={(e) => handleMaxMarksChange(e.target.value)}
+                min="1"
+                className={`w-full p-2 rounded-lg border ${
+                  theme === 'dark'
+                    ? 'bg-white/5 border-white/10 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
             </div>
           </div>
         </div>
@@ -272,39 +371,53 @@ function MarksEntry() {
                 <tr className={`${
                   theme === 'dark' ? 'bg-white/5' : 'bg-gray-50'
                 }`}>
-                  <th className="px-6 py-4 text-left text-lg font-semibold">Roll No</th>
+                  <th className="px-6 py-4 text-left text-lg font-semibold">USN</th>
                   <th className="px-6 py-4 text-left text-lg font-semibold">Name</th>
+                  <th className="px-6 py-4 text-left text-lg font-semibold">Year</th>
+                  <th className="px-6 py-4 text-left text-lg font-semibold">Department</th>
+                  <th className="px-6 py-4 text-left text-lg font-semibold">Section</th>
                   <th className="px-6 py-4 text-left text-lg font-semibold">Marks</th>
-                  <th className="px-6 py-4 text-left text-lg font-semibold">Max Marks</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map((student) => (
-                  <tr key={student.id} className={`border-t ${
-                    theme === 'dark' ? 'border-white/10' : 'border-gray-200'
-                  }`}>
-                    <td className="px-6 py-4">{student.rollNo}</td>
-                    <td className="px-6 py-4">{student.name}</td>
-                    <td className="px-6 py-4">
+                  <tr key={student.id} className={`${
+                    theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-gray-50'
+                  } transition-colors`}>
+                    <td className={`px-6 py-4 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                    }`}>
+                      {student.usn}
+                    </td>
+                    <td className={`px-6 py-4 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                    }`}>
+                      {student.name}
+                    </td>
+                    <td className={`px-6 py-4 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                    }`}>
+                      {student.year}
+                    </td>
+                    <td className={`px-6 py-4 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                    }`}>
+                      {student.department}
+                    </td>
+                    <td className={`px-6 py-4 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                    }`}>
+                      {student.section}
+                    </td>
+                    <td className={`px-6 py-4 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
+                    }`}>
                       <input
                         type="number"
                         value={student.marks}
                         onChange={(e) => handleMarksChange(student.id, e.target.value)}
                         min="0"
                         max={maxMarks}
-                        className={`w-24 p-2 rounded-lg border ${
-                          theme === 'dark'
-                            ? 'bg-white/5 border-white/10 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <input
-                        type="number"
-                        value={maxMarks}
-                        onChange={(e) => handleMaxMarksChange(e.target.value)}
-                        min="1"
                         className={`w-24 p-2 rounded-lg border ${
                           theme === 'dark'
                             ? 'bg-white/5 border-white/10 text-white'
@@ -322,6 +435,7 @@ function MarksEntry() {
         {/* Submit Button */}
         <div className="mt-6 flex justify-end">
           <button
+            onClick={handleSubmit}
             className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors duration-300"
           >
             Save Marks
@@ -338,4 +452,4 @@ function MarksEntry() {
   );
 }
 
-export default MarksEntry; 
+export default MarksEntry;

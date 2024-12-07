@@ -10,6 +10,10 @@ const attendanceRoutes = require('./routes/attendanceRoutes');
 const feeRoutes = require('./routes/feeRoutes');
 const examRoutes = require('./routes/examRoutes');
 const markRoutes = require('./routes/markRoutes');
+const teacherAttendanceRoutes = require('./routes/teacherAttendanceRoutes');
+const teacherMarksRoutes = require('./routes/teacherMarksRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const adminTeacherRoutes = require('./routes/adminTeacherRoutes');
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {
@@ -51,6 +55,10 @@ app.use('/api', attendanceRoutes);
 app.use('/api', feeRoutes);
 app.use('/api', examRoutes);
 app.use('/api', markRoutes);
+app.use('/api', teacherAttendanceRoutes);
+app.use('/api', teacherMarksRoutes);
+app.use('/api', feedbackRoutes);
+app.use('/api', adminTeacherRoutes);
 
 // Error handling middleware
 app.use((req, res) => {

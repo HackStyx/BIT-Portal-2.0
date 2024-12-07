@@ -1,21 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaEdit, FaTrash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { AdminSidebar } from '../components/AdminSidebar';
-import { Search, Moon, Sun, Bell, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Plus, Moon, Sun, Bell, X } from 'lucide-react';
+import { FaEdit, FaTrash } from 'react-icons/fa';
+// Change this line:
+import { AdminSidebar } from '../components/AdminSidebar';
 
 function TeachersPage() {
-  const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const navigate = useNavigate();
+  const adminName = localStorage.getItem('adminName') || 'Admin';
+
+  const baseURL = process.env.REACT_APP_SERVER_PORT 
+    ? `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api`
+    : 'http://localhost:5000/api';
+
   const [newTeacher, setNewTeacher] = useState({
     teacherId: '',
     name: '',
@@ -26,66 +33,49 @@ function TeachersPage() {
     subjects: []
   });
 
-  const adminName = localStorage.getItem('adminName') || 'Admin';
-  const baseURL = process.env.REACT_APP_SERVER_PORT 
-    ? `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api`
-    : 'http://localhost:5000/api';
-
-  const fallbackTeachers = [
-    {
-      teacherId: "TECH001",
-      name: "Harish BT",
-      email: "harish.bt@college.edu",
-      department: "Computer Science",
-      designation: "Assistant Professor",
-      subjects: ["Data Structures", "Algorithms", "Database Management"]
-    },
-    {
-      teacherId: "TECH002",
-      name: "Pooja P",
-      email: "Pooja.p@college.edu",
-      department: "Computer Science",
-      designation: "Assistant Professor",
-      subjects: ["Data Structures", "Algorithms", "Database Management"]
-    },
-    {
-      teacherId: "TECH003",
-      name: "Madhuri J",
-      email: "madhuri.j@college.edu",
-      department: "Computer Science",
-      designation: "Assistant Professor",
-      subjects: ["Data Structures", "Algorithms", "Database Management"]
-    }
-  ];
-
   const fetchTeachers = useCallback(async () => {
     try {
       const token = localStorage.getItem('adminToken');
       if (!token) {
+        console.log('No admin token found');
         navigate('/admin/login');
         return;
       }
 
+      console.log('Fetching teachers with token:', token);
       const response = await fetch(`${baseURL}/auth/admin/teachers`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token,
           'Content-Type': 'application/json'
         }
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('adminToken');
+          navigate('/admin/login');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}, message: ${data.message}`);
+      }
       
       if (data.success) {
-        const cleanedTeachers = data.teachers.map(({ _id, ...rest }) => rest);
-        setTeachers(cleanedTeachers);
-        setError('');
+        if (Array.isArray(data.teachers)) {
+          setTeachers(data.teachers);
+          setError('');
+        } else {
+          throw new Error('Teachers data is not an array');
+        }
       } else {
         throw new Error(data.message || 'Failed to fetch teachers');
       }
     } catch (error) {
       console.error('Error fetching teachers:', error);
-      
-      setTeachers(fallbackTeachers);
+      setError(`Failed to fetch teachers: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -96,10 +86,11 @@ function TeachersPage() {
   }, [fetchTeachers]);
 
   const handleInputChange = (e) => {
-    setNewTeacher({
-      ...newTeacher,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setNewTeacher(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -121,13 +112,19 @@ function TeachersPage() {
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': token,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(newTeacher)
       });
 
       const data = await response.json();
+
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('adminToken');
+        navigate('/admin/login');
+        return;
+      }
 
       if (data.success) {
         setSuccess(isEditing ? 'Teacher updated successfully!' : 'Teacher added successfully!');
@@ -144,7 +141,7 @@ function TeachersPage() {
         });
         await fetchTeachers();
       } else {
-        setError(data.message || 'Operation failed. Teacher not found.');
+        setError(data.message || 'Operation failed');
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -157,15 +154,26 @@ function TeachersPage() {
 
     try {
       const token = localStorage.getItem('adminToken');
+      if (!token) {
+        navigate('/admin/login');
+        return;
+      }
+
       const response = await fetch(`${baseURL}/auth/admin/teachers/delete/${teacherId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token,
           'Content-Type': 'application/json'
         }
       });
 
       const data = await response.json();
+
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('adminToken');
+        navigate('/admin/login');
+        return;
+      }
 
       if (data.success) {
         setSuccess('Teacher deleted successfully!');
@@ -449,6 +457,19 @@ function TeachersPage() {
                       required
                     />
                     <input
+                      type="email"
+                      name="email"
+                      value={newTeacher.email}
+                      onChange={handleInputChange}
+                      placeholder="Email"
+                      className={`w-full p-2 rounded-lg border ${
+                        theme === 'dark' 
+                          ? 'bg-white/10 border-white/20 text-white' 
+                          : 'bg-white border-gray-200'
+                      }`}
+                      required
+                    />
+                    <input
                       type="text"
                       name="department"
                       value={newTeacher.department}
@@ -475,64 +496,47 @@ function TeachersPage() {
                       required
                     />
                     <input
-                      type="email"
-                      name="email"
-                      value={newTeacher.email}
+                      type="password"
+                      name="password"
+                      value={newTeacher.password}
                       onChange={handleInputChange}
-                      placeholder="Email"
+                      placeholder={isEditing ? "Leave blank to keep current password" : "Password"}
                       className={`w-full p-2 rounded-lg border ${
                         theme === 'dark' 
                           ? 'bg-white/10 border-white/20 text-white' 
                           : 'bg-white border-gray-200'
                       }`}
-                      required
+                      required={!isEditing}
                     />
-                    {!isEditing && (
-                      <input
-                        type="password"
-                        name="password"
-                        value={newTeacher.password}
-                        onChange={handleInputChange}
-                        placeholder="Password"
-                        className={`w-full p-2 rounded-lg border ${
-                          theme === 'dark' 
-                            ? 'bg-white/10 border-white/20 text-white' 
-                            : 'bg-white border-gray-200'
-                        }`}
-                        required
-                      />
-                    )}
-                  </div>
-
-                  <div className="flex justify-end gap-4 mt-6">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddForm(false);
-                        setIsEditing(false);
+                    <input
+                      type="text"
+                      name="subjects"
+                      value={Array.isArray(newTeacher.subjects) ? newTeacher.subjects.join(', ') : ''}
+                      onChange={(e) => {
+                        const subjectsArray = e.target.value
+                          .split(',')
+                          .map(subject => subject.trim())
+                          .filter(subject => subject !== '');
                         setNewTeacher({
-                          teacherId: '',
-                          name: '',
-                          department: '',
-                          designation: '',
-                          email: '',
-                          password: '',
-                          subjects: []
+                          ...newTeacher,
+                          subjects: subjectsArray
                         });
                       }}
-                      className={`px-4 py-2 rounded-lg ${
-                        theme === 'dark'
-                          ? 'bg-white/10 hover:bg-white/20'
-                          : 'bg-gray-100 hover:bg-gray-200'
+                      placeholder="Subjects (comma-separated)"
+                      className={`w-full p-2 rounded-lg border ${
+                        theme === 'dark' 
+                          ? 'bg-white/10 border-white/20 text-white' 
+                          : 'bg-white border-gray-200'
                       }`}
-                    >
-                      Cancel
-                    </button>
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-4">
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
-                      {isEditing ? 'Update' : 'Add'} Teacher
+                      {isEditing ? 'Update Teacher' : 'Add Teacher'}
                     </button>
                   </div>
                 </form>

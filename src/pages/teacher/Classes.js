@@ -9,7 +9,7 @@ function Classes() {
   const [currentDayClasses, setCurrentDayClasses] = useState([]);
 
   const schedule = {
-    SUN: [
+    SAT: [
       { time: "11:00 AM", title: "Break", type: "break" },
       { time: "1:30 PM", title: "Break", type: "break" },
       { time: "2:00 PM", title: "Teacher's Meeting", location: "Staff Room-505", type: "meeting", icon: <Users className="h-4 w-4" />, topics: ["Weekly Planning", "Student Progress Review"] },
@@ -48,7 +48,7 @@ function Classes() {
       { time: "2:00 PM", title: "Teacher's Meeting", location: "Staff Room-505", type: "meeting", icon: <Users className="h-4 w-4" />, topics: ["Curriculum Updates", "Student Issues"] },
       { time: "3:00 PM", title: "Python Lab", location: "518", type: "lab", icon: <Terminal className="h-4 w-4" />, topics: ["Data Analysis", "Machine Learning"] }
     ],
-    SAT: []
+    SUN: []
   };
 
   useEffect(() => {

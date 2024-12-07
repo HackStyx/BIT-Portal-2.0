@@ -14,7 +14,6 @@ router.get('/attendance/:usn', async (req, res) => {
   try {
     const { usn } = req.params;
     console.log('Fetching attendance for USN:', usn);
-
     const records = await Attendance.find({ usn });
     console.log('Found records:', records);
 

@@ -17,37 +17,6 @@ const feedbackQuestions = [
   "The teacher's Behavior, Sincerity and Overall Teaching effectiveness"
 ];
 
-const subjects = [
-  {
-    section: 'B',
-    code: 'BCS501',
-    name: 'Software Engineering and Project Management',
-    faculty: 'Manjunath H',
-    status: 'Pending'
-  },
-  {
-    section: 'B',
-    code: 'BCS502',
-    name: 'Computer Networks',
-    faculty: 'Nagamani D R',
-    status: 'Pending'
-  },
-  {
-    section: 'B',
-    code: 'BCS503',
-    name: 'Theory of Computation',
-    faculty: 'Sunanda H G',
-    status: 'Pending'
-  },
-  {
-    section: 'B',
-    code: 'BCS515B',
-    name: 'Artificial Intelligence',
-    faculty: 'Bhargavi M S',
-    status: 'Pending'
-  }
-];
-
 function FeedbackPage() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -55,26 +24,80 @@ function FeedbackPage() {
   const [ratings, setRatings] = useState({});
   const [theme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [studentData, setStudentData] = useState(null);
+  const [submittedSubjects, setSubmittedSubjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [subjects, setSubjects] = useState([
+    {
+      section: 'B',
+      code: 'CS101',
+      name: 'Data Structures and Algorithms',
+      faculty: 'Dr. Harish Kumar BT',
+      status: 'Pending'
+    },
+    {
+      section: 'B',
+      code: 'CS102',
+      name: 'Database Management Systems',
+      faculty: 'Prof. Nethravathy V',
+      status: 'Pending'
+    },
+    {
+      section: 'B',
+      code: 'CS103',
+      name: 'Operating Systems',
+      faculty: 'Prof. Pooja P',
+      status: 'Pending'
+    }
+  ]);
 
   useEffect(() => {
-    const fetchStudentData = async () => {
+    const fetchData = async () => {
       try {
         const usn = localStorage.getItem('studentUSN');
         if (!usn) {
           navigate('/login');
           return;
         }
-        const response = await fetch(`http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/auth/student/${usn}`);
-        const data = await response.json();
-        if (data.success) {
-          setStudentData(data.student);
+
+        // Fetch student data
+        const studentResponse = await fetch(
+          `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/auth/student/${usn}`
+        );
+        const studentData = await studentResponse.json();
+        
+        console.log('Raw student data:', studentData);
+
+        if (studentData.success) {
+          console.log('Student object:', studentData.student);
+          setStudentData(studentData.student);
+          
+          // Fetch feedback status
+          const statusResponse = await fetch(
+            `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/feedback/status/${usn}`
+          );
+          const statusData = await statusResponse.json();
+          
+          if (statusData.success) {
+            setSubmittedSubjects(statusData.submittedSubjects);
+            // Update subjects with submission status
+            setSubjects(prevSubjects => 
+              prevSubjects.map(subject => ({
+                ...subject,
+                status: statusData.submittedSubjects.includes(subject.code) 
+                  ? 'Submitted' 
+                  : 'Pending'
+              }))
+            );
+          }
         }
       } catch (error) {
-        console.error('Error fetching student data:', error);
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchStudentData();
+    fetchData();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -90,12 +113,85 @@ function FeedbackPage() {
     }));
   };
 
-  const handleSubmit = () => {
-    // Handle submission logic here
-    console.log('Submitted ratings:', ratings);
-    setSelectedSubject(null);
-    setRatings({});
+  const handleSubmit = async () => {
+    try {
+      const usn = localStorage.getItem('studentUSN');
+      if (!usn || !selectedSubject) {
+        alert('Please select a subject before submitting.');
+        return;
+      }
+
+      // Calculate semester from year
+      const semester = studentData?.year ? studentData.year * 2 : null;
+      if (!semester) {
+        alert('Unable to determine semester. Please try again.');
+        return;
+      }
+
+      // Validate all questions are answered
+      const responses = feedbackQuestions.map((_, index) => ({
+        questionId: index + 1,
+        rating: ratings[`${selectedSubject.code}-${index}`] || 0
+      }));
+
+      if (responses.some(r => r.rating === 0)) {
+        alert('Please answer all questions before submitting.');
+        return;
+      }
+
+      const submissionData = {
+        studentId: usn,
+        subject: selectedSubject.code,
+        faculty: selectedSubject.faculty,
+        responses,
+        semester: semester.toString()
+      };
+
+      // Debug log
+      console.log('Submitting feedback data:', submissionData);
+
+      const response = await fetch(
+        `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/feedback/submit`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submissionData),
+        }
+      );
+
+      const data = await response.json();
+      console.log('Server response:', data);
+
+      if (data.success) {
+        alert('Feedback submitted successfully!');
+        setSubmittedSubjects([...submittedSubjects, selectedSubject.code]);
+        setSubjects(prevSubjects =>
+          prevSubjects.map(subject =>
+            subject.code === selectedSubject.code
+              ? { ...subject, status: 'Submitted' }
+              : subject
+          )
+        );
+        setSelectedSubject(null);
+        setRatings({});
+      } else {
+        alert(data.message || 'Failed to submit feedback');
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      alert('Error submitting feedback. Please try again.');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex h-screen ${theme === 'dark' ? 'bg-[#111111]' : 'bg-gray-50'}`}>
@@ -118,6 +214,11 @@ function FeedbackPage() {
           }`}>
             Feedback
           </h1>
+          {studentData && (
+            <div className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+              {studentData.name} | {studentData.usn} | Year: {studentData.year} | Sem: {studentData.year * 2}
+            </div>
+          )}
         </header>
 
         <main className={`flex-1 overflow-x-hidden overflow-y-auto p-6 ${
@@ -163,12 +264,16 @@ function FeedbackPage() {
                       {subjects.map((subject, index) => (
                         <tr
                           key={index}
-                          onClick={() => setSelectedSubject(subject)}
+                          onClick={() => {
+                            if (subject.status !== 'Submitted') {
+                              setSelectedSubject(subject);
+                            }
+                          }}
                           className={`cursor-pointer transition-all duration-200 ${
                             theme === 'dark'
                               ? 'hover:bg-white/5 even:bg-white/[0.02]'
                               : 'hover:bg-gray-50 even:bg-gray-50/50'
-                          }`}
+                          } ${subject.status === 'Submitted' ? 'opacity-50' : ''}`}
                         >
                           <td className={`px-6 py-4 text-sm ${
                             theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
@@ -283,7 +388,10 @@ function FeedbackPage() {
 
                 <div className="flex justify-between gap-4">
                   <button
-                    onClick={() => setSelectedSubject(null)}
+                    onClick={() => {
+                      setSelectedSubject(null);
+                      setRatings({});
+                    }}
                     className={`px-4 py-2 rounded-lg transition-colors ${
                       theme === 'dark'
                         ? 'bg-white/10 hover:bg-white/20 text-white'
@@ -308,4 +416,4 @@ function FeedbackPage() {
   );
 }
 
-export default FeedbackPage; 
+export default FeedbackPage;

@@ -5,39 +5,39 @@ import TeacherLayout from '../../components/layouts/TeacherLayout';
 
 const dayColors = {
   SUN: {
-    bg: 'bg-rose-500',
-    gradient: 'from-rose-500/10 to-orange-500/10',
-    text: 'text-rose-500'
+    bg: 'bg-rose-900/50',
+    gradient: 'from-rose-900/30 to-rose-800/20',
+    text: 'text-rose-300'
   },
   MON: {
-    bg: 'bg-blue-500',
-    gradient: 'from-blue-500/10 to-cyan-500/10',
-    text: 'text-blue-500'
+    bg: 'bg-blue-900/50',
+    gradient: 'from-blue-900/30 to-blue-800/20',
+    text: 'text-blue-300'
   },
   TUE: {
-    bg: 'bg-purple-500',
-    gradient: 'from-purple-500/10 to-pink-500/10',
-    text: 'text-purple-500'
+    bg: 'bg-purple-900/50',
+    gradient: 'from-purple-900/30 to-purple-800/20',
+    text: 'text-purple-300'
   },
   WED: {
-    bg: 'bg-green-500',
-    gradient: 'from-green-500/10 to-emerald-500/10',
-    text: 'text-green-500'
+    bg: 'bg-green-900/50',
+    gradient: 'from-green-900/30 to-green-800/20',
+    text: 'text-green-300'
   },
   THU: {
-    bg: 'bg-yellow-500',
-    gradient: 'from-yellow-500/10 to-amber-500/10',
-    text: 'text-yellow-500'
+    bg: 'bg-yellow-900/50',
+    gradient: 'from-yellow-900/30 to-yellow-800/20',
+    text: 'text-yellow-300'
   },
   FRI: {
-    bg: 'bg-indigo-500',
-    gradient: 'from-indigo-500/10 to-violet-500/10',
-    text: 'text-indigo-500'
+    bg: 'bg-indigo-900/50',
+    gradient: 'from-indigo-900/30 to-indigo-800/20',
+    text: 'text-indigo-300'
   },
   SAT: {
-    bg: 'bg-gray-500',
-    gradient: 'from-gray-500/10 to-slate-500/10',
-    text: 'text-gray-500'
+    bg: 'bg-gray-900/50',
+    gradient: 'from-gray-900/30 to-gray-800/20',
+    text: 'text-gray-300'
   }
 };
 
@@ -50,17 +50,7 @@ function Schedule() {
   useEffect(() => {
     const fetchScheduleData = async () => {
       try {
-        // Updated schedule data
         const updatedScheduleData = [
-          {
-            day: "SUN",
-            classes: [
-              { time: "11:00 AM", subject: "Break", type: "break" },
-              { time: "1:30 PM", subject: "Break", type: "break" },
-              { time: "2:00 PM", subject: "Teacher's Meeting", location: "Staff Room-505", type: "meeting", icon: <Users className="h-4 w-4" /> },
-              { time: "3:00 PM", subject: "Software Engineering", location: "502", type: "engineering", icon: <Code className="h-4 w-4" /> }
-            ]
-          },
           {
             day: "MON",
             classes: [
@@ -109,6 +99,15 @@ function Schedule() {
               { time: "3:00 PM", subject: "Python Lab", location: "518", type: "lab", icon: <Terminal className="h-4 w-4" /> }
             ]
           },
+          {
+            day: "SAT",
+            classes: [
+              { time: "11:00 AM", subject: "Break", type: "break" },
+              { time: "1:30 PM", subject: "Break", type: "break" },
+              { time: "2:00 PM", subject: "Teacher's Meeting", location: "Staff Room-505", type: "meeting", icon: <Users className="h-4 w-4" /> },
+              { time: "3:00 PM", subject: "Software Engineering", location: "502", type: "engineering", icon: <Code className="h-4 w-4" /> }
+            ]
+          },
         ];
         setScheduleData(updatedScheduleData);
         setLoading(false);
@@ -121,206 +120,146 @@ function Schedule() {
     fetchScheduleData();
   }, []);
 
-  const getTypeStyles = (type, theme) => {
+  const getTypeStyles = (type) => {
     const styles = {
       break: theme === 'dark' 
-        ? 'bg-gray-500/20 text-gray-300' 
-        : 'bg-gray-100 text-gray-600',
+        ? 'bg-gray-900/60 text-gray-300 border border-gray-800/70'
+        : 'bg-gray-100 text-gray-600 border border-gray-200',
       meeting: theme === 'dark'
-        ? 'bg-purple-500/20 text-purple-300'
-        : 'bg-purple-100 text-purple-600',
+        ? 'bg-purple-900/60 text-purple-300 border border-purple-800/70'
+        : 'bg-purple-100 text-purple-600 border border-purple-200',
       engineering: theme === 'dark'
-        ? 'bg-green-500/20 text-green-300'
-        : 'bg-green-100 text-green-600',
+        ? 'bg-green-900/60 text-green-300 border border-green-800/70'
+        : 'bg-green-100 text-green-600 border border-green-200',
       lab: theme === 'dark'
-        ? 'bg-yellow-500/20 text-yellow-300'
-        : 'bg-yellow-100 text-yellow-600',
+        ? 'bg-yellow-900/60 text-yellow-300 border border-yellow-800/70'
+        : 'bg-yellow-100 text-yellow-600 border border-yellow-200',
       chat: theme === 'dark'
-        ? 'bg-pink-500/20 text-pink-300'
-        : 'bg-pink-100 text-pink-600'
+        ? 'bg-pink-900/60 text-pink-300 border border-pink-800/70'
+        : 'bg-pink-100 text-pink-600 border border-pink-200'
     };
     return styles[type] || styles.break;
   };
 
-  const content = (
-    <motion.div 
-      className="flex-1"
-      initial={false}
-      animate={{ 
-        marginLeft: sidebarOpen ? "240px" : "80px"
-      }}
-      transition={{
-        duration: 0.3,
-        ease: "easeInOut"
-      }}
-    >
-      <div className="p-8">
-        {/* Enhanced Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-tight">
-            Class Schedule
-          </h1>
-        </div>
-
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`p-6 rounded-xl shadow-lg border backdrop-blur-sm ${
-              theme === 'dark'
-                ? 'bg-white/10 border-white/20 hover:bg-white/15'
-                : 'bg-white border-gray-200 hover:bg-gray-50'
-            } transition-all duration-300`}
-          >
-            <Clock className={`h-8 w-8 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mb-3`} />
-            <h3 className={`text-xl font-semibold mb-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-800'
-            }`}>Today's Classes</h3>
-            <p className={`text-3xl font-bold ${
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>4</p>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`p-6 rounded-xl shadow-lg border backdrop-blur-sm ${
-              theme === 'dark'
-                ? 'bg-white/10 border-white/20 hover:bg-white/15'
-                : 'bg-white border-gray-200 hover:bg-gray-50'
-            } transition-all duration-300`}
-          >
-            <Calendar className={`h-8 w-8 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mb-3`} />
-            <h3 className={`text-xl font-semibold mb-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-800'
-            }`}>Weekly Hours</h3>
-            <p className={`text-3xl font-bold ${
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>24</p>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`p-6 rounded-xl shadow-lg border backdrop-blur-sm ${
-              theme === 'dark'
-                ? 'bg-white/10 border-white/20 hover:bg-white/15'
-                : 'bg-white border-gray-200 hover:bg-gray-50'
-            } transition-all duration-300`}
-          >
-            <Users className={`h-8 w-8 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} mb-3`} />
-            <h3 className={`text-xl font-semibold mb-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-800'
-            }`}>Total Classes</h3>
-            <p className={`text-3xl font-bold ${
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-            }`}>6</p>
-          </motion.div>
-        </div>
-
-        {/* Enhanced Schedule Table */}
-        <div className="overflow-x-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className={`rounded-xl border backdrop-blur-sm ${
-              theme === 'dark'
-                ? 'bg-white/10 border-white/20'
-                : 'bg-white border-gray-200'
-            }`}
-          >
-            {scheduleData.map((day, index) => (
-              <div key={day.day} className="mb-8 last:mb-0">
-                <div className={`flex items-center gap-4 mb-4`}>
-                  <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl ${dayColors[day.day].bg} ${theme === 'dark' ? 'bg-opacity-20' : 'bg-opacity-10'}`}>
-                    <span className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : dayColors[day.day].text}`}>
-                      {day.day}
-                    </span>
-                  </div>
-                  <div className="h-0.5 flex-1 bg-gradient-to-r opacity-20 rounded-full" 
-                       style={{
-                         background: `linear-gradient(to right, ${theme === 'dark' ? 'white' : 'black'}, transparent)`
-                       }}
-                  />
+  const renderTable = () => (
+    <div className={`w-full overflow-x-auto rounded-lg shadow-2xl border ${
+      theme === 'dark' 
+        ? 'bg-gray-900 border-gray-800' 
+        : 'bg-white border-gray-200'
+    }`}>
+      <table className={`w-full min-w-[800px] divide-y ${
+        theme === 'dark' ? 'divide-gray-800' : 'divide-gray-200'
+      } bg-transparent transition-colors duration-200`}>
+        <thead>
+          <tr>
+            {scheduleData.map((day) => (
+              <th 
+                key={day.day} 
+                className={`sticky top-0 py-4 px-6 text-sm font-semibold tracking-wider
+                  ${dayColors[day.day].bg} ${dayColors[day.day].gradient} 
+                  ${theme === 'dark' ? dayColors[day.day].text : 'text-gray-800'}
+                  transition-all duration-200 ease-in-out
+                `}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {day.day}
                 </div>
-                
-                <div className="space-y-4">
-                  {day.classes.map((classItem, classIndex) => (
-                    <motion.div
-                      key={classIndex}
-                      whileHover={{ scale: 1.01 }}
-                      className={`p-5 rounded-xl border ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 hover:bg-white/10 border-white/10' 
-                          : 'bg-white hover:bg-gray-50 border-gray-100'
-                      } transition-all duration-300 shadow-lg`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <span className={`px-3 py-1.5 rounded-lg font-medium ${
-                              theme === 'dark' 
-                                ? 'bg-white/10 text-white' 
-                                : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {classItem.time}
-                            </span>
-                            {classItem.type && (
-                              <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${
-                                getTypeStyles(classItem.type, theme)
-                              }`}>
-                                {classItem.type}
-                              </span>
-                            )}
-                          </div>
-                          <h3 className={`text-lg font-semibold mt-3 ${
-                            theme === 'dark' ? 'text-white' : 'text-gray-800'
-                          }`}>
-                            {classItem.subject}
-                          </h3>
-                          {classItem.location && (
-                            <p className={`flex items-center mt-2 ${
-                              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
-                              <MapPin className="w-4 h-4 mr-1.5" />
-                              {classItem.location}
-                            </p>
-                          )}
-                        </div>
-                        {classItem.icon && (
-                          <div className={`p-3 rounded-xl ${
-                            theme === 'dark' 
-                              ? 'bg-white/10' 
-                              : 'bg-gray-100'
-                          }`}>
-                            {classItem.icon}
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              </th>
             ))}
-          </motion.div>
-        </div>
-      </div>
-    </motion.div>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 8 }).map((_, rowIndex) => (
+            <tr 
+              key={rowIndex} 
+              className={`hover:bg-gray-800/50 transition-colors duration-150 ${
+                theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'
+              }`}
+            >
+              {scheduleData.map((day) => (
+                <td 
+                  key={day.day} 
+                  className={`py-3 px-4 transition-all duration-200 ${
+                    theme === 'dark' ? 'bg-gray-900' : 'bg-white'
+                  }`}
+                >
+                  {day.classes[rowIndex] ? (
+                    <div 
+                      className={`
+                        p-3 rounded-lg shadow-md
+                        ${getTypeStyles(day.classes[rowIndex].type)}
+                        transform hover:scale-105 transition-all duration-200
+                        hover:shadow-xl
+                      `}
+                    >
+                      <div className="flex items-center justify-center gap-2 font-semibold mb-1">
+                        <Clock className="h-4 w-4" />
+                        {day.classes[rowIndex].time}
+                      </div>
+                      <div className="font-medium text-center">
+                        {day.classes[rowIndex].subject}
+                      </div>
+                      {day.classes[rowIndex].location && (
+                        <div className="flex items-center justify-center gap-1 mt-1 text-sm text-gray-400">
+                          <MapPin className="h-3 w-3" />
+                          {day.classes[rowIndex].location}
+                        </div>
+                      )}
+                      {day.classes[rowIndex].icon && (
+                        <div className="mt-2 flex justify-center text-gray-500">
+                          {day.classes[rowIndex].icon}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={`text-center ${
+                      theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
+                    }`}>-</div>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
-
-  if (loading) {
-    return (
-      <TeacherLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
-      </TeacherLayout>
-    );
-  }
 
   return (
     <TeacherLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
-      {content}
+      <div className={`
+        min-h-screen
+        transition-all duration-300 ease-in-out
+        p-4 md:p-6 lg:p-8
+        ${sidebarOpen ? 'ml-64' : 'ml-16'}
+        ${sidebarOpen ? 'w-[calc(100%-16rem)]' : 'w-[calc(100%-4rem)]'}
+        ${theme === 'dark' ? 'bg-[#111111]' : 'bg-gray-50'}
+      `}>
+        <h1 className={`text-2xl md:text-3xl font-bold mb-6 ${
+          theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+        }`}>
+          Class Schedule
+        </h1>
+        <div className={`rounded-xl shadow-2xl p-4 
+          transition-all duration-200 overflow-hidden border
+          ${theme === 'dark' 
+            ? 'bg-gray-900 border-gray-800' 
+            : 'bg-white border-gray-200'
+          }`}>
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
+          ) : (
+            <div className="max-w-full overflow-x-auto">
+              {renderTable()}
+            </div>
+          )}
+        </div>
+      </div>
     </TeacherLayout>
   );
 }
 
-export default Schedule; 
+export default Schedule;

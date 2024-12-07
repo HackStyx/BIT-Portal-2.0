@@ -416,7 +416,7 @@ function DashboardPage() {
                     <span>Current CGPA</span>
                     <span className={`font-semibold ${
                       theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
-                    }`}>8.5</span>
+                    }`}></span>
                   </div>
                   <button 
                     onClick={() => setIsCGPACalculatorOpen(true)}
