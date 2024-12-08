@@ -2,43 +2,47 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { Bell, Search, Moon, Sun } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer, XAxis, Tooltip } from "recharts";
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
+import { format } from 'date-fns';
 
 // Function to generate graph data
-const generateGraphData = (total, change) => {
+const generateGraphData = (total, change, isActiveUsers = false) => {
   const months = 6; // Show last 6 months
   const data = [];
   const today = new Date();
-  let currentValue = total - (change * 3); // Start from a lower value
   
   for (let i = months - 1; i >= 0; i--) {
     const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
     const monthName = date.toLocaleString('default', { month: 'short' });
     
-    // Generate random fluctuation between -10% and +10% of the total
-    const fluctuation = Math.floor((Math.random() - 0.5) * 0.2 * total);
-    
-    if (i === 0) {
-      // Current month - use actual total
-      data.push({ name: monthName, value: total });
-    } else if (i === 1) {
-      // Last month - use total minus change
-      data.push({ name: monthName, value: total - change });
+    if (isActiveUsers) {
+      // For active users, show 0 for past months and current total for this month
+      if (i === 0) {
+        // Current month - use actual total
+        data.push({ name: monthName, value: total });
+      } else {
+        // Previous months - show as 0
+        data.push({ name: monthName, value: 0 });
+      }
     } else {
-      // Previous months - show gradual growth/decline with random fluctuations
-      currentValue = Math.max(0, currentValue + fluctuation);
-      data.push({ name: monthName, value: Math.round(currentValue) });
+      // Original logic for other stats
+      let currentValue = total - (change * 3); // Start from a lower value
+      const fluctuation = Math.floor((Math.random() - 0.5) * 0.2 * total);
+      
+      if (i === 0) {
+        // Current month - use actual total
+        data.push({ name: monthName, value: total });
+      } else if (i === 1) {
+        // Last month - use total minus change
+        data.push({ name: monthName, value: total - change });
+      } else {
+        // Previous months - show gradual growth/decline with random fluctuations
+        currentValue = Math.max(0, currentValue + fluctuation);
+        data.push({ name: monthName, value: Math.round(currentValue) });
+      }
     }
-  }
-  
-  // Ensure the graph shows an overall trend matching the change
-  if (change > 0) {
-    // For positive change, ensure the first value is lower than the last
-    data[0].value = Math.min(data[0].value, total - (change * 2));
-  } else if (change < 0) {
-    // For negative change, ensure the first value is higher than the last
-    data[0].value = Math.max(data[0].value, total + (Math.abs(change) * 2));
   }
   
   return data;
@@ -64,6 +68,15 @@ function AdminDashboard() {
     newStudentsThisMonth: 0,
     newTeachersThisMonth: 0
   });
+  const [socket, setSocket] = useState(null);
+  const [realTimeStats, setRealTimeStats] = useState({
+    activeStudents: 0,
+    activeTeachers: 0,
+    totalActive: 0
+  });
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [lastLogin, setLastLogin] = useState(null);
+  const notificationRef = useRef(null);
 
   const adminName = localStorage.getItem('adminName') || 'Admin';
   const baseURL = process.env.REACT_APP_SERVER_PORT 
@@ -178,6 +191,69 @@ function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
+  // Update Socket.IO connection effect
+  useEffect(() => {
+    const newSocket = io('http://localhost:5000', {
+      withCredentials: true
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket server');
+      // Identify as admin
+      newSocket.emit('userConnected', {
+        userType: 'admin',
+        userId: localStorage.getItem('adminToken')
+      });
+    });
+
+    newSocket.on('activeUsers', (data) => {
+      console.log('Received active users update:', data); // Debug log
+      setRealTimeStats({
+        activeStudents: data.students,
+        activeTeachers: data.teachers,
+        totalActive: data.total
+      });
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      if (newSocket) newSocket.disconnect();
+    };
+  }, []);
+
+  // Add click outside handler for notifications
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Update effect to get last login time
+  useEffect(() => {
+    const lastLoginTime = localStorage.getItem('adminLastLogin');
+    if (lastLoginTime) {
+      setLastLogin(new Date(lastLoginTime));
+    } else {
+      // If no last login time exists, set current time
+      const currentTime = new Date();
+      localStorage.setItem('adminLastLogin', currentTime.toISOString());
+      setLastLogin(currentTime);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    // Store current time as last login before logging out
+    localStorage.setItem('adminLastLogin', new Date().toISOString());
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminName');
+    navigate('/admin/login');
+  };
+
   return (
     <div className={`min-h-screen ${
       theme === 'dark' ? 'bg-[#111111] text-white' : 'bg-gray-50 text-gray-800'
@@ -261,13 +337,80 @@ function AdminDashboard() {
                   {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
                 </button>
 
-                <button className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                  theme === 'dark' 
-                    ? 'text-white hover:bg-white/20'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}>
-                  <Bell className="h-5 w-5" />
-                </button>
+                <div className="relative" ref={notificationRef}>
+                  <button 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                      theme === 'dark' 
+                        ? 'text-white hover:bg-white/20'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setShowNotifications(!showNotifications)}
+                  >
+                    <Bell className="h-5 w-5" />
+                  </button>
+
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className={`absolute right-0 mt-2 w-80 rounded-lg shadow-lg border ${
+                          theme === 'dark' 
+                            ? 'bg-[#1a1a1a] border-white/20' 
+                            : 'bg-white border-gray-200'
+                        }`}
+                      >
+                        <div className="p-4">
+                          <h3 className={`text-lg font-semibold mb-3 ${
+                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            Admin Activity
+                          </h3>
+                          
+                          <div className={`space-y-3 ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">Last Login</div>
+                              <div className="text-sm">
+                                {lastLogin ? (
+                                  <>
+                                    <div>{format(lastLogin, 'MMMM d, yyyy')}</div>
+                                    <div>{format(lastLogin, 'h:mm a')}</div>
+                                  </>
+                                ) : (
+                                  'First login'
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">Admin Details</div>
+                              <div className="text-sm">
+                                <div>Name: {adminName}</div>
+                                <div>Role: Administrator</div>
+                                <div>Session Started: {format(new Date(), 'h:mm a')}</div>
+                              </div>
+                            </div>
+
+                            <div className={`pt-2 mt-2 border-t ${
+                              theme === 'dark' ? 'border-white/10' : 'border-gray-100'
+                            }`}>
+                              <div className="text-sm">
+                                Current Active Users: {realTimeStats.totalActive}
+                                <div className="text-xs mt-1">
+                                  {realTimeStats.activeStudents} students, {realTimeStats.activeTeachers} teachers
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -311,10 +454,11 @@ function AdminDashboard() {
               />
               <StatsCard
                 title="Active Users"
-                value={stats.activeUsers.toLocaleString()}
-                change={stats.newStudentsThisMonth + stats.newTeachersThisMonth}
-                chart={generateGraphData(stats.activeUsers, stats.newStudentsThisMonth + stats.newTeachersThisMonth)}
+                value={realTimeStats.totalActive.toString()}
+                change={realTimeStats.totalActive}
+                chart={generateGraphData(realTimeStats.totalActive, realTimeStats.totalActive, true)}
                 theme={theme}
+                details={`${realTimeStats.activeStudents} students, ${realTimeStats.activeTeachers} teachers online`}
               />
             </motion.div>
 
@@ -392,29 +536,26 @@ function AdminDashboard() {
 }
 
 // Stats Card Component
-function StatsCard({ title, value, change, chart, theme }) {
+function StatsCard({ title, value, change, chart, theme, details }) {
   const [graphData, setGraphData] = useState(chart);
-
-  // Refresh graph data every 5 minutes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setGraphData(generateGraphData(parseInt(value), change));
-    }, 300000); // 5 minutes in milliseconds
-
-    return () => clearInterval(interval);
-  }, [value, change]);
 
   // Update graph data when value or change updates
   useEffect(() => {
-    setGraphData(generateGraphData(parseInt(value), change));
+    setGraphData(generateGraphData(parseInt(value) || 0, change || 0));
   }, [value, change]);
 
   const getChangeDisplay = () => {
+    // If there's no previous data, show "New data" instead of a change
+    if (!value || value === '0') return "No data available";
+    if (change === undefined || change === null) return "New data";
     if (change === 0) return "No change from last month";
     return `${change > 0 ? '+' : ''}${change} from last month`;
   };
 
   const getChangeColor = () => {
+    if (!value || value === '0' || change === undefined || change === null) {
+      return theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
+    }
     if (change === 0) return theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
     return change > 0 ? 'text-green-500' : 'text-red-500';
   };
@@ -427,9 +568,16 @@ function StatsCard({ title, value, change, chart, theme }) {
     }`}>
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <div className="mt-4">
-        <div className="text-3xl font-bold">{value}</div>
+        <div className="text-3xl font-bold">{value || '0'}</div>
+        {details && (
+          <div className={`text-sm mt-1 ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            {details}
+          </div>
+        )}
         <div className="flex items-center gap-2 mt-1">
-          {change !== 0 && (
+          {change !== undefined && change !== null && change !== 0 && (
             <span className={`flex items-center ${getChangeColor()}`}>
               {change > 0 ? (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,7 +600,15 @@ function StatsCard({ title, value, change, chart, theme }) {
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke={change > 0 ? '#10B981' : change < 0 ? '#EF4444' : '#6B7280'}
+                stroke={
+                  !value || value === '0' || change === undefined || change === null
+                    ? '#6B7280'
+                    : change > 0 
+                      ? '#10B981' 
+                      : change < 0 
+                        ? '#EF4444' 
+                        : '#6B7280'
+                }
                 strokeWidth={2}
                 dot={false}
               />

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import io from 'socket.io-client';
 
 function TeacherLoginPage() {
   const [teacherId, setTeacherId] = useState('');
@@ -8,12 +9,20 @@ function TeacherLoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [isCaptchaLoading, setIsCaptchaLoading] = useState(true);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    if (!captchaToken) {
+      setError('Please complete the CAPTCHA verification');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('http://localhost:5000/api/auth/teacher/login', {
@@ -24,6 +33,7 @@ function TeacherLoginPage() {
         body: JSON.stringify({
           teacherId,
           password,
+          captchaToken: captchaToken,
         }),
       });
 
@@ -35,17 +45,69 @@ function TeacherLoginPage() {
         localStorage.setItem('teacherId', data.teacher.teacherId);
         localStorage.setItem('teacherName', data.teacher.name);
         localStorage.setItem('teacherDepartment', data.teacher.department);
+        
+        // Connect to socket after successful login
+        const socket = io('http://localhost:5000', {
+          withCredentials: true
+        });
+        
+        socket.emit('userConnected', {
+          userType: 'teachers',
+          userId: data.teacher.teacherId
+        });
+        
         navigate('/teacher/dashboard');
       } else {
         setError(data.message || 'Login failed');
+        if (window.turnstile) {
+          window.turnstile.reset();
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
       setError('Failed to connect to the server');
+      if (window.turnstile) {
+        window.turnstile.reset();
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    console.log('Initializing Turnstile');
+    setIsCaptchaLoading(false);
+
+    if (window.turnstile) {
+      console.log('Rendering Turnstile');
+      try {
+        window.turnstile.render('#turnstile-container', {
+          sitekey: '0x4AAAAAAAyhIICvPwmmNpnu',
+          callback: function(token) {
+            console.log('CAPTCHA token received:', token);
+            setCaptchaToken(token);
+          },
+          'error-callback': function() {
+            console.error('Turnstile encountered an error');
+            setError('CAPTCHA encountered an error. Please try again.');
+            setCaptchaToken(null);
+          }
+        });
+      } catch (error) {
+        console.error('Error rendering Turnstile:', error);
+        setError('Failed to load CAPTCHA. Please try again later.');
+      }
+    } else {
+      console.error('Turnstile object not found');
+      setError('Failed to load CAPTCHA. Please try again later.');
+    }
+
+    return () => {
+      if (window.turnstile) {
+        window.turnstile.remove('#turnstile-container');
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center md:justify-start bg-gradient-to-r from-blue-900 via-purple-900 to-indigo-900 relative p-4 sm:p-6 md:p-8">
@@ -95,7 +157,11 @@ function TeacherLoginPage() {
                 </button>
               </div>
             </div>
-            {error && <p className="text-red-500">{error}</p>}
+            <div className="flex justify-center">
+              <div id="turnstile-container" className="relative z-10"></div>
+            </div>
+            {isCaptchaLoading && <p className="text-white text-center">Loading CAPTCHA...</p>}
+            {error && <p className="text-red-500 text-center">{error}</p>}
             <div className="flex justify-center">
               <button
                 type="submit"

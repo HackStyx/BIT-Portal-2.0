@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ThumbsUp, Share2, BookOpen, Calendar, Clock, Sun, Moon, User, LogOut, Settings, Mail, Phone, MapPin, Calculator, FileText } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useAvatar } from './contexts/AvatarContext';
 import { motion } from 'framer-motion';
+import io from 'socket.io-client';
+import axios from 'axios';
 
 // Update these imports to match your project structure
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
@@ -14,6 +16,7 @@ import { ProfileModal } from './components/ProfileModal';
 import { SettingsModal } from './components/SettingsModal';
 import { useAttendance } from './contexts/AttendanceContext';
 import { CGPACalculatorModal } from './components/CGPACalculatorModal';
+import { Loader } from "lucide-react";
 
 const getYearSuffix = (year) => {
   const yearNum = parseInt(year);
@@ -53,10 +56,20 @@ function DashboardPage() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const { avatar } = useAvatar();
+  const { avatar, setAvatar, loading: avatarLoading } = useAvatar();
   const { overallAttendance } = useAttendance();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isCGPACalculatorOpen, setIsCGPACalculatorOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  useEffect(() => {
+    const usn = localStorage.getItem('studentUSN');
+    const savedAvatar = usn ? localStorage.getItem(`avatar_${usn}`) : null;
+    if (savedAvatar && !avatar) {
+      setAvatar(savedAvatar);
+    }
+  }, [avatar, setAvatar]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -130,6 +143,116 @@ function DashboardPage() {
     console.log('Student data:', studentData);
   }, [avatar, studentData]);
 
+  useEffect(() => {
+    const socket = io('http://localhost:5000', {
+      withCredentials: true
+    });
+    
+    socket.emit('userConnected', {
+      userType: 'students',
+      userId: localStorage.getItem('studentUSN')
+    });
+    
+    return () => socket.disconnect();
+  }, []);
+
+  const handleImageUpload = useCallback(async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image size should be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'student_profiles');
+
+      const response = await axios.post(
+        'https://api.cloudinary.com/v1_1/dpgsv7n88/image/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log('Upload progress:', percentCompleted + '%');
+          },
+        }
+      );
+
+      if (response.data.secure_url) {
+        // Update profile picture in backend
+        const updateResponse = await fetch(`http://localhost:${process.env.REACT_APP_SERVER_PORT}/api/auth/update-profile-picture`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            usn: localStorage.getItem('studentUSN'),
+            profilePicture: response.data.secure_url
+          }),
+        });
+
+        const data = await updateResponse.json();
+        if (data.success) {
+          const imageUrl = response.data.secure_url;
+          setAvatar(imageUrl);
+          localStorage.setItem('profileImage', imageUrl);
+          console.log('Profile picture updated successfully');
+        } else {
+          setUploadError('Failed to update profile picture');
+        }
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadError(
+        error.response?.data?.error?.message ||
+        'Failed to upload image. Please try again.'
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }, [setAvatar]);
+
+  // Add debug logs
+  useEffect(() => {
+    console.log('Current avatar state:', avatar);
+  }, [avatar]);
+
+  // Add debug logs
+  useEffect(() => {
+    console.log('Avatar in header:', avatar);
+  }, [avatar]);
+
+  useEffect(() => {
+    if (avatar) {
+      console.log('Avatar URL:', avatar);
+      // Test if the image can be loaded
+      const img = new Image();
+      img.onload = () => console.log('Image loaded successfully');
+      img.onerror = (e) => console.error('Image failed to load:', e);
+      img.src = avatar;
+    }
+  }, [avatar]);
+
+  useEffect(() => {
+    console.log('Header Avatar State:', { avatar, loading: avatarLoading });
+  }, [avatar, avatarLoading]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-r from-blue-900 via-purple-900 to-indigo-900 relative p-4 sm:p-6 md:p-8 flex items-center justify-center">
@@ -189,102 +312,21 @@ function DashboardPage() {
                 )}
               </button>
 
-              {/* Profile Dropdown */}
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <button className="group relative flex items-center gap-2 rounded-full transition-all duration-300">
-                    <div className="relative h-10 w-10">
-                      <Avatar className="h-full w-full rounded-full ring-2 ring-white/20 group-hover:ring-white/40 transition-all duration-300">
-                        <AvatarImage 
-                          src={avatar} 
-                          alt={studentData?.name || 'User'} 
-                          className="h-full w-full object-cover"
-                        />
-                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-medium">
-                          {studentData?.name?.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-[#111111]" />
-                    </div>
-                  </button>
-                </DropdownMenu.Trigger>
-
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    className="w-[300px] rounded-xl p-2 shadow-xl bg-[#1A1A1A] border border-white/10"
-                    align="end"
-                    sideOffset={5}
-                  >
-                    {/* Profile Card */}
-                    <div className="px-4 py-3">
-                      <div className="flex items-center gap-4 mb-4">
-                        <Avatar className="h-16 w-16 rounded-full ring-2 ring-white/20">
-                          <AvatarImage 
-                            src={avatar} 
-                            alt={studentData?.name || 'User'} 
-                            className="h-full w-full object-cover"
-                          />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl font-medium">
-                            {studentData?.name?.charAt(0).toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="text-lg font-semibold text-white">
-                            {studentData?.name}
-                          </h3>
-                          <p className="text-sm text-gray-400">
-                            {studentData?.usn}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Quick Info */}
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <BookOpen size={14} />
-                          <span>{studentData?.department || 'Computer Science'}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <Mail size={14} />
-                          <span>{studentData?.email || 'student@example.com'}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <MapPin size={14} />
-                          <span>{studentData?.section || 'Section A'}</span>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="h-px bg-white/10 my-2" />
-
-                      {/* Menu Items */}
-                      <div className="space-y-1">
-                        <DropdownMenu.Item
-                          className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer hover:bg-white/10 text-gray-200 transition-colors"
-                          onClick={() => setIsProfileOpen(true)}
-                        >
-                          <User size={16} />
-                          View Full Profile
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item
-                          className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer hover:bg-white/10 text-gray-200 transition-colors"
-                          onClick={() => setIsSettingsOpen(true)}
-                        >
-                          <Settings size={16} />
-                          Settings
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item
-                          className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer hover:bg-red-500/20 text-red-400 transition-colors"
-                          onClick={handleLogout}
-                        >
-                          <LogOut size={16} />
-                          Logout
-                        </DropdownMenu.Item>
-                      </div>
-                    </div>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
+              {/* Profile Avatar - Updated */}
+              <button 
+                onClick={() => setIsProfileOpen(true)} 
+                className="focus:outline-none relative w-10 h-10"
+              >
+                <div className={`h-full w-full rounded-full flex items-center justify-center transition-all duration-200 hover:ring-2 hover:ring-offset-2 ${
+                  theme === 'dark' 
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:ring-purple-500 hover:ring-offset-gray-900' 
+                    : 'bg-gray-200 hover:bg-gray-300 hover:ring-purple-500 hover:ring-offset-white'
+                }`}>
+                  <User className={`h-5 w-5 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`} />
+                </div>
+              </button>
             </div>
           </div>
         </header>
@@ -534,10 +576,134 @@ function DashboardPage() {
       </div>
       <ProfileModal 
         isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)} 
+        onClose={() => setIsProfileOpen(false)}
         studentData={studentData}
         theme={theme}
-      />
+      >
+        <div className="relative p-[3px] rounded-2xl bg-gradient-to-r from-purple-600 via-violet-600 to-purple-600">
+          <div className={`relative p-8 rounded-2xl backdrop-blur-xl overflow-hidden ${
+            theme === 'dark' 
+              ? 'bg-gradient-to-br from-gray-900/95 to-gray-800/95' 
+              : 'bg-white/95'
+          }`}>
+            {/* Background Glow Effects */}
+            <div className="absolute top-0 left-0 w-full h-full">
+              <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+              <div className="absolute top-0 -right-4 w-72 h-72 bg-violet-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+              <div className="absolute -bottom-8 left-20 w-72 h-72 bg-fuchsia-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+            </div>
+
+            <div className="relative flex flex-col items-center text-center space-y-8">
+              {/* Profile Header with Enhanced Glow Effect */}
+              <div className="relative">
+                <div className="absolute -inset-2 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full blur-lg opacity-75 animate-pulse"></div>
+                <Avatar className="relative h-32 w-32 rounded-full ring-4 ring-purple-500 ring-offset-4 ring-offset-background">
+                  <AvatarImage 
+                    src={avatar} 
+                    alt={studentData?.name || 'User'} 
+                    className="object-cover rounded-full"
+                  />
+                  <AvatarFallback className="bg-gradient-to-br from-violet-600 to-purple-600 text-3xl font-semibold text-white">
+                    {studentData?.name?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              {/* Name and USN with Enhanced Typography */}
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                  {studentData?.name}
+                </h2>
+                <p className={`text-sm font-medium ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                  {studentData?.usn}
+                </p>
+              </div>
+
+              {/* Info Cards with Purple Theme */}
+              <div className="w-full space-y-4">
+                <div className={`group flex items-center gap-4 p-4 rounded-xl transition-all duration-300 border border-purple-500/20 ${
+                  theme === 'dark' 
+                    ? 'bg-purple-900/20 hover:bg-purple-900/30 hover:border-purple-500/30' 
+                    : 'bg-purple-50 hover:bg-purple-100 hover:border-purple-500/30'
+                }`}>
+                  <div className={`p-3 rounded-lg ${
+                    theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-500/10'
+                  }`}>
+                    <BookOpen className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className={`text-xs font-medium ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    }`}>Department</span>
+                    <span className={`font-medium ${
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                    }`}>
+                      {studentData?.department || 'Computer Science'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={`group flex items-center gap-4 p-4 rounded-xl transition-all duration-300 border border-purple-500/20 ${
+                  theme === 'dark' 
+                    ? 'bg-purple-900/20 hover:bg-purple-900/30 hover:border-purple-500/30' 
+                    : 'bg-purple-50 hover:bg-purple-100 hover:border-purple-500/30'
+                }`}>
+                  <div className={`p-3 rounded-lg ${
+                    theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-500/10'
+                  }`}>
+                    <Mail className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className={`text-xs font-medium ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    }`}>Email</span>
+                    <span className={`font-medium ${
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                    }`}>
+                      {studentData?.email}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={`group flex items-center gap-4 p-4 rounded-xl transition-all duration-300 border border-purple-500/20 ${
+                  theme === 'dark' 
+                    ? 'bg-purple-900/20 hover:bg-purple-900/30 hover:border-purple-500/30' 
+                    : 'bg-purple-50 hover:bg-purple-100 hover:border-purple-500/30'
+                }`}>
+                  <div className={`p-3 rounded-lg ${
+                    theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-500/10'
+                  }`}>
+                    <MapPin className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className={`text-xs font-medium ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    }`}>Section</span>
+                    <span className={`font-medium ${
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                    }`}>
+                      Section {studentData?.section}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Enhanced Close Button */}
+              <button 
+                onClick={() => setIsProfileOpen(false)}
+                className="w-full py-4 rounded-xl font-medium text-white transition-all duration-300
+                  bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700
+                  shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/30
+                  transform hover:scale-[1.02] border border-purple-500/20"
+              >
+                Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      </ProfileModal>
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)}

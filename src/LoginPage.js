@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
 
 function LoginPage() {
   const [seatNumber, setSeatNumber] = useState('');
@@ -11,6 +12,7 @@ function LoginPage() {
   const [isCaptchaLoading, setIsCaptchaLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const [isCookiesBlocked, setIsCookiesBlocked] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,6 +44,17 @@ function LoginPage() {
       if (data.success) {
         localStorage.setItem('studentUSN', seatNumber);
         localStorage.setItem('token', data.token);
+        
+        // Connect to socket after successful login
+        const socket = io('http://localhost:5000', {
+          withCredentials: true
+        });
+        
+        socket.emit('userConnected', {
+          userType: 'students',
+          userId: seatNumber
+        });
+        
         navigate('/dashboard');
       } else {
         setError(data.message || 'Login failed');
@@ -64,6 +77,21 @@ function LoginPage() {
     console.log('Initializing Turnstile');
     setIsCaptchaLoading(false);
 
+    // Check if third-party cookies are blocked
+    const checkCookies = async () => {
+      try {
+        const response = await fetch('https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/if/ov2/av0', {
+          credentials: 'include'
+        });
+        setIsCookiesBlocked(false);
+      } catch (error) {
+        console.error('Cookie check failed:', error);
+        setIsCookiesBlocked(true);
+      }
+    };
+
+    checkCookies();
+
     if (window.turnstile) {
       console.log('Rendering Turnstile');
       try {
@@ -72,6 +100,7 @@ function LoginPage() {
           callback: function(token) {
             console.log('CAPTCHA token received:', token);
             setCaptchaToken(token);
+            setError(''); // Clear any existing errors
           },
           'error-callback': function() {
             console.error('Turnstile encountered an error');
@@ -103,9 +132,9 @@ function LoginPage() {
         <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur-xl opacity-30 animate-glow"></div>
         
         {/* Main login box */}
-        <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-6 md:p-8 border border-white/20 shadow-2xl hover:border-white/30 transition-all duration-300">
-          {/* Shimmer effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -skew-x-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-6 md:p-8 border border-white/20 shadow-2xl hover:border-white/30 transition-all duration-300 group">
+          {/* Modified shimmer effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -skew-x-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
           
           <h2 className="mb-6 md:mb-8 text-4xl md:text-5xl font-extrabold text-white text-center sm:text-left relative">
             Student Portal Login
@@ -148,10 +177,11 @@ function LoginPage() {
                 </button>
               </div>
             </div>
-            <div id="turnstile-container" className="my-4" style={{ minHeight: '65px', display: 'flex', justifyContent: 'center' }}>
-              {isCaptchaLoading && <p className="text-white">Loading CAPTCHA...</p>}
+            <div className="flex flex-col items-center space-y-2">
+              <div id="turnstile-container" className="relative z-10"></div>
+              {isCaptchaLoading && <p className="text-white text-center">Loading CAPTCHA...</p>}
+              {error && <p className="text-red-500 text-center">{error}</p>}
             </div>
-            {error && <p className="text-red-500">{error}</p>}
             <div className="flex justify-center">
               <button
                 type="submit"

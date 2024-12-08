@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TeacherSidebar } from './components/TeacherSidebar';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import io from 'socket.io-client';
 
 const data = [
   { name: "Jan", value: 60 },
@@ -92,6 +93,19 @@ function TeacherDashboard() {
     };
 
     fetchTeacherData();
+  }, []);
+
+  useEffect(() => {
+    const socket = io('http://localhost:5000', {
+      withCredentials: true
+    });
+    
+    socket.emit('userConnected', {
+      userType: 'teachers',
+      userId: localStorage.getItem('teacherId')
+    });
+    
+    return () => socket.disconnect();
   }, []);
 
   const calculateStats = async (year, month) => {

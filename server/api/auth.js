@@ -6,6 +6,7 @@ const { verifyTurnstileToken } = require('./verify-turnstile');
 const User = require('../models/User');
 const Teacher = require('../models/Teacher');
 const authMiddleware = require('../middleware/auth');
+const Admin = require('../models/Admin');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -291,39 +292,85 @@ router.get('/auth/admin/getRecentTeachers', authMiddleware, async (req, res) => 
 // Admin login route
 router.post('/admin/login', async (req, res) => {
   try {
-    const { password } = req.body;
+    const { username, password } = req.body;
+    
+    // Log the request
+    console.log('Admin login attempt:', { username });
 
-    // Check if password matches environment variable
-    if (password === process.env.REACT_APP_ADMIN_PASSWORD) {
-      // Generate JWT token with admin role
-      const token = jwt.sign(
-        { 
-          role: 'admin',
-          timestamp: Date.now()
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      console.log('Admin login successful, token generated');
-
-      res.json({
-        success: true,
-        message: 'Admin logged in successfully',
-        token,
-        adminName: 'Admin'
-      });
-    } else {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid admin password'
+    // Find admin by username
+    const admin = await Admin.findOne({ username });
+    
+    if (!admin) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
       });
     }
+
+    // Verify password (assuming you're storing hashed passwords)
+    const isValidPassword = password === admin.password; // Replace with proper password comparison
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: admin._id, role: 'admin' },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Send success response
+    res.json({
+      success: true,
+      token,
+      admin: {
+        name: admin.name,
+        username: admin.username
+      }
+    });
+
   } catch (error) {
     console.error('Admin login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Login failed'
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error' 
+    });
+  }
+});
+
+// Add this route handler for updating profile picture
+router.put('/update-profile-picture', async (req, res) => {
+  try {
+    const { usn, profilePicture } = req.body;
+    
+    const updatedUser = await User.findOneAndUpdate(
+      { usn },
+      { profilePicture },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Student not found' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      user: updatedUser,
+      message: 'Profile picture updated successfully' 
+    });
+  } catch (error) {
+    console.error('Error updating profile picture:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while updating profile picture' 
     });
   }
 });

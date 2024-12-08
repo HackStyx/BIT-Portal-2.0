@@ -12,11 +12,54 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>BIT Student Portal  (Bangalore Institute of Technology)</title>
-    <script
-      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-      async
-      defer
-    ></script>
+    
+    <!-- Add error handling for Turnstile -->
+    <script>
+      window.addEventListener('error', function(e) {
+        if (e.target.src && e.target.src.includes('turnstile')) {
+          console.error('Turnstile script failed to load:', e);
+        }
+      }, true);
+
+      // Check for third-party cookie support
+      function checkThirdPartyCookies() {
+        var img = document.createElement('img');
+        img.src = 'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/if/ov2/av0';
+        img.onerror = function() {
+          window.thirdPartyCookiesEnabled = false;
+        };
+        img.onload = function() {
+          window.thirdPartyCookiesEnabled = true;
+        };
+      }
+      checkThirdPartyCookies();
+    </script>
+
+    <!-- Load Turnstile with retry logic -->
+    <script>
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      function loadTurnstile() {
+        if (retryCount >= maxRetries) {
+          console.error('Failed to load Turnstile after', maxRetries, 'attempts');
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+        script.async = true;
+        script.defer = true;
+        script.onerror = function() {
+          console.error('Turnstile load attempt', retryCount + 1, 'failed');
+          retryCount++;
+          setTimeout(loadTurnstile, 1000 * retryCount); // Exponential backoff
+        };
+        document.head.appendChild(script);
+      }
+
+      loadTurnstile();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

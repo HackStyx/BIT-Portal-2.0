@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, Moon, Sun, Bell, X } from 'lucide-react';
 import { FaEdit, FaTrash } from 'react-icons/fa';
+import { format } from 'date-fns';
+import io from 'socket.io-client';
 // Change this line:
 import { AdminSidebar } from '../components/AdminSidebar';
 
@@ -18,6 +20,14 @@ function TeachersPage() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const navigate = useNavigate();
   const adminName = localStorage.getItem('adminName') || 'Admin';
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [lastLogin, setLastLogin] = useState(null);
+  const [realTimeStats, setRealTimeStats] = useState({
+    activeStudents: 0,
+    activeTeachers: 0,
+    totalActive: 0
+  });
+  const notificationRef = useRef(null);
 
   const baseURL = process.env.REACT_APP_SERVER_PORT 
     ? `http://localhost:${process.env.REACT_APP_SERVER_PORT}/api`
@@ -84,6 +94,49 @@ function TeachersPage() {
   useEffect(() => {
     fetchTeachers();
   }, [fetchTeachers]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const lastLoginTime = localStorage.getItem('adminLastLogin');
+    if (lastLoginTime) {
+      setLastLogin(new Date(lastLoginTime));
+    }
+  }, []);
+
+  useEffect(() => {
+    const newSocket = io('http://localhost:5000', {
+      withCredentials: true
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket server');
+      newSocket.emit('userConnected', {
+        userType: 'admin',
+        userId: localStorage.getItem('adminToken')
+      });
+    });
+
+    newSocket.on('activeUsers', (data) => {
+      setRealTimeStats({
+        activeStudents: data.students,
+        activeTeachers: data.teachers,
+        totalActive: data.total
+      });
+    });
+
+    return () => {
+      if (newSocket) newSocket.disconnect();
+    };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -267,6 +320,82 @@ function TeachersPage() {
                   Add Teacher
                 </button>
 
+                {/* Notification Button */}
+                <div className="relative" ref={notificationRef}>
+                  <button 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                      theme === 'dark' 
+                        ? 'text-white hover:bg-white/20'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setShowNotifications(!showNotifications)}
+                  >
+                    <Bell className="h-5 w-5" />
+                  </button>
+
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className={`absolute right-0 mt-2 w-80 rounded-lg shadow-lg border ${
+                          theme === 'dark' 
+                            ? 'bg-[#1a1a1a] border-white/20' 
+                            : 'bg-white border-gray-200'
+                        }`}
+                      >
+                        <div className="p-4">
+                          <h3 className={`text-lg font-semibold mb-3 ${
+                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            Admin Activity
+                          </h3>
+                          
+                          <div className={`space-y-3 ${
+                            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">Last Login</div>
+                              <div className="text-sm">
+                                {lastLogin ? (
+                                  <>
+                                    <div>{format(lastLogin, 'MMMM d, yyyy')}</div>
+                                    <div>{format(lastLogin, 'h:mm a')}</div>
+                                  </>
+                                ) : (
+                                  'First login'
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">Admin Details</div>
+                              <div className="text-sm">
+                                <div>Name: {adminName}</div>
+                                <div>Role: Administrator</div>
+                                <div>Session Started: {format(new Date(), 'h:mm a')}</div>
+                              </div>
+                            </div>
+
+                            <div className={`pt-2 mt-2 border-t ${
+                              theme === 'dark' ? 'border-white/10' : 'border-gray-100'
+                            }`}>
+                              <div className="text-sm">
+                                Current Active Users: {realTimeStats.totalActive}
+                                <div className="text-xs mt-1">
+                                  {realTimeStats.activeStudents} students, {realTimeStats.activeTeachers} teachers
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {/* Theme Toggle */}
                 <button
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
@@ -281,15 +410,6 @@ function TeachersPage() {
                   }}
                 >
                   {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                </button>
-
-                {/* Notifications */}
-                <button className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                  theme === 'dark' 
-                    ? 'text-white hover:bg-white/20'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}>
-                  <Bell className="h-5 w-5" />
                 </button>
               </div>
             </div>
